@@ -40,14 +40,16 @@ create table if not exists public.families (
   points      jsonb not null default '[]' check (jsonb_typeof(points) = 'array' and jsonb_array_length(points) <= 30),
   blurb       text check (char_length(blurb) <= 4000),
   photo_path  text check (photo_path ~ '^[0-9a-f-]{36}\.jpg$'),
-  source      text not null default 'form'
+  source      text not null default 'form',
+  ip_hash     text
 );
+alter table public.families add column if not exists ip_hash text;
+create index if not exists families_ip_hash_idx on public.families (ip_hash);
 alter table public.families enable row level security;
 
+-- Submissions come in through the submit-profile Edge Function (which enforces the
+-- per-IP limit), so the public key gets no direct insert access.
 drop policy if exists "Anyone can submit a profile" on public.families;
-create policy "Anyone can submit a profile" on public.families
-  for insert to anon, authenticated
-  with check (source = 'form');
 
 drop policy if exists "Admins can read profiles" on public.families;
 create policy "Admins can read profiles" on public.families
@@ -61,16 +63,13 @@ drop policy if exists "Admins can delete profiles" on public.families;
 create policy "Admins can delete profiles" on public.families
   for delete to authenticated using (public.is_dashboard_admin());
 
--- 3. Family photos: a private bucket. Families can upload; only admins can view or delete.
+-- 3. Family photos: a private bucket. Uploads go through the Edge Function; only admins can view or delete.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('family-photos', 'family-photos', false, 5242880, array['image/jpeg'])
 on conflict (id) do update
   set public = false, file_size_limit = 5242880, allowed_mime_types = array['image/jpeg'];
 
 drop policy if exists "Anyone can upload a family photo" on storage.objects;
-create policy "Anyone can upload a family photo" on storage.objects
-  for insert to anon, authenticated
-  with check (bucket_id = 'family-photos' and name ~ '^[0-9a-f-]{36}\.jpg$');
 
 drop policy if exists "Admins can view family photos" on storage.objects;
 create policy "Admins can view family photos" on storage.objects

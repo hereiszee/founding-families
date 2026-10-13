@@ -144,6 +144,7 @@ const T = {
     err_family:"Add your family name to continue.",
     err_photo_up:"Couldn't upload your photo. Try again, or remove it and submit without one.",
     err_submit:"Couldn't submit right now. Check your connection and try again. Nothing you typed is lost.",
+    err_limit:"It looks like a profile has already been submitted from this connection. If that's a mistake, contact whoever sent you this form.",
     thanks:n=> n ? `Thank you, ${n} family.` : "Thank you.", thanks_sub:"Your profile has been sent to the founding team. They'll be in touch."
   },
   he:{
@@ -169,13 +170,13 @@ const T = {
     err_family:"הוסיפו שם משפחה כדי להמשיך.",
     err_photo_up:"העלאת התמונה לא הצליחה. נסו שוב, או הסירו אותה ושלחו בלעדיה.",
     err_submit:"השליחה לא הצליחה כרגע. בדקו את החיבור ונסו שוב. שום דבר ממה שכתבתם לא אבד.",
+    err_limit:"נראה שכבר נשלח פרופיל מהחיבור הזה. אם זו טעות, פנו למי ששלח לכם את הטופס.",
     thanks:n=> n ? `תודה, משפחת ${n}.` : "תודה.", thanks_sub:"הפרופיל שלכם נשלח לצוות המייסד. ניצור איתכם קשר."
   }
 };
 
 const $ = id => document.getElementById(id);
 const DRAFT_KEY = "founding-families-draft-v2";
-const BUCKET = "family-photos";
 const cfg = window.APP_CONFIG || {};
 const ready = !!(cfg.supabaseUrl && cfg.supabaseKey && window.supabase);
 const sb = ready ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey, { auth:{ persistSession:false, autoRefreshToken:false } }) : null;
@@ -288,11 +289,6 @@ $("drop").addEventListener("drop", e=>{
   e.preventDefault(); $("drop").classList.remove("over");
   takePhoto(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]);
 });
-function dataUrlToBlob(u){
-  const b64 = u.split(",")[1], bin = atob(b64), arr = new Uint8Array(bin.length);
-  for(let i=0;i<bin.length;i++) arr[i] = bin.charCodeAt(i);
-  return new Blob([arr], {type:"image/jpeg"});
-}
 
 /* ---------- kids ---------- */
 const xIcon = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
@@ -417,21 +413,19 @@ $("form").addEventListener("submit", async e=>{
   }
   if(!ready){ $("notReady").hidden = false; $("notReady").scrollIntoView({behavior:"smooth", block:"center"}); return; }
   submitting = true; $("submitBtn").disabled = true; $("submitBtn").textContent = t("submitting");
-  const id = crypto.randomUUID();
-  let photo_path = null;
   try{
-    if(state.photo){
-      const { error } = await sb.storage.from(BUCKET).upload(`${id}.jpg`, dataUrlToBlob(state.photo), { contentType:"image/jpeg", upsert:false });
-      if(error){ $("status").textContent = t("err_photo_up"); $("status").className = "status bad"; return; }
-      photo_path = `${id}.jpg`;
-    }
-    const { error } = await sb.from("families").insert({
-      id, lang: state.lang,
-      family_name: state.familyName.trim(), husband: state.husband.trim(), wife: state.wife.trim(), contact: state.contact.trim(),
+    const { data, error } = await sb.functions.invoke("submit-profile", { body:{
+      lang: state.lang,
+      familyName: state.familyName.trim(), husband: state.husband.trim(), wife: state.wife.trim(), contact: state.contact.trim(),
       kids: state.kids.filter(k=>k.name.trim()||String(k.age).trim()).map(k=>({name:k.name.trim(), age:String(k.age).trim()})),
-      points: cleanPoints(), blurb: state.blurb.trim(), photo_path, source:"form"
-    });
-    if(error){ $("status").textContent = t("err_submit"); $("status").className = "status bad"; return; }
+      points: cleanPoints(), blurb: state.blurb.trim(), photo: state.photo || ""
+    }});
+    if(error || !(data && data.ok)){
+      const status = error && error.context && error.context.status;
+      let code = ""; try{ code = (await error.context.json()).error; }catch(e){}
+      const msg = status===429 || code==="limit_reached" ? t("err_limit") : code==="photo_upload" || code==="bad_photo" ? t("err_photo_up") : t("err_submit");
+      $("status").textContent = msg; $("status").className = "status bad"; return;
+    }
     submittedName = state.familyName.trim();
     clearDraft();
     $("thanksTitle").textContent = t("thanks")(submittedName);

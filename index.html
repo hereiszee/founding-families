@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Founding families</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M4 26 L16 8 L28 26 Z' fill='%238C9C70'/><rect x='12' y='18' width='8' height='8' fill='%2326301F'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700&family=Assistant:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <span></span>
+    <div class="lang" role="group" aria-label="Language">
+      <button class="seg" data-lang="en" aria-pressed="true">English</button>
+      <button class="seg" data-lang="he" aria-pressed="false" lang="he">עברית</button>
+    </div>
+  </div>
+
+  <div class="hero" aria-hidden="true">
+    <svg viewBox="0 0 600 130" preserveAspectRatio="xMidYMax meet">
+      <circle cx="470" cy="46" r="18" fill="var(--sun)" opacity=".85"/>
+      <path d="M0 100 C 70 78, 130 84, 190 74 S 320 58, 390 70 S 520 84, 600 72 L600 130 L0 130 Z" fill="var(--ridge-far)"/>
+      <path d="M0 118 C 90 104, 170 92, 250 88 C 300 86, 330 80, 360 82 C 420 86, 500 104, 600 100 L600 130 L0 130 Z" fill="var(--ridge)"/>
+      <g fill="var(--house)">
+        <rect x="282" y="70" width="22" height="16" rx="1"/><path d="M279 71 L293 60 L307 71 Z"/>
+        <rect x="316" y="68" width="22" height="16" rx="1"/><path d="M313 69 L327 58 L341 69 Z"/>
+        <rect x="333" y="56" width="3" height="7"/>
+      </g>
+      <circle class="smoke" cx="334.5" cy="50" r="2.4" fill="var(--muted)"/>
+    </svg>
+  </div>
+
+  <main id="formView">
+    <h1 data-t="title">Founding families</h1>
+    <p class="lead" data-t="lead"></p>
+    <p class="banner" id="notReady" hidden data-t="not_ready"></p>
+
+    <form class="sheet" id="form" novalidate>
+      <section class="block">
+        <h2 data-t="sec_family"></h2>
+        <div class="grid">
+          <div class="f full">
+            <span class="lbl" id="photoLbl" data-t="photo"></span>
+            <p class="help" data-t="photo_help"></p>
+            <label class="drop" id="drop">
+              <input type="file" id="photoInput" class="sr-only" accept="image/*" aria-labelledby="photoLbl">
+              <img id="photoImg" alt="" hidden>
+              <span class="drop-empty" id="dropEmpty">
+                <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="8" width="28" height="20" rx="3"/><path d="M12 8l2-3h6l2 3"/><circle cx="17" cy="18" r="5"/></svg>
+                <span data-t="photo_add"></span>
+                <small id="photoHint" data-t="photo_hint"></small>
+              </span>
+            </label>
+            <div class="photo-actions" id="photoActions" hidden>
+              <button type="button" class="plain" id="photoReplace" data-t="photo_replace"></button>
+              <button type="button" class="plain danger" id="photoRemove" data-t="photo_remove"></button>
+            </div>
+            <p class="err" id="errPhoto" hidden></p>
+          </div>
+          <label class="f full"><span class="lbl" data-t="familyName"></span>
+            <input type="text" id="familyName" autocomplete="family-name" maxlength="120">
+            <span class="err" id="errFamily" hidden data-t="err_family" style="display:block"></span>
+          </label>
+          <label class="f"><span class="lbl" data-t="husband"></span><input type="text" id="husband" maxlength="120"></label>
+          <label class="f"><span class="lbl" data-t="wife"></span><input type="text" id="wife" maxlength="120"></label>
+          <label class="f full"><span class="lbl" data-t="contact"></span><input type="text" id="contact" autocomplete="email" maxlength="200"></label>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2 data-t="sec_kids"></h2>
+        <div id="kids"></div>
+        <button type="button" class="add" id="addKid" data-t="addKid"></button>
+      </section>
+
+      <section class="block">
+        <h2 data-t="sec_about"></h2>
+        <span class="lbl" data-t="points_label"></span>
+        <p class="help" data-t="points_help"></p>
+        <div id="pointsArea">
+          <div id="points"></div>
+          <button type="button" class="add" id="addPoint" data-t="addPoint"></button>
+        </div>
+
+        <div style="height:24px"></div>
+        <label class="f" for="blurb"><span class="lbl" data-t="blurb_label"></span></label>
+        <p class="help" id="blurbHelp"></p>
+        <div class="gen-row" id="genRow">
+          <button type="button" class="ghost" id="genBtn">
+            <svg id="genIcon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l1.5 4 4 1.5-4 1.5L8 12.5 6.5 8.5l-4-1.5 4-1.5z" fill="currentColor"/></svg>
+            <span class="spin" id="genSpin" hidden></span>
+            <span id="genLabel"></span>
+          </button>
+          <span class="note" id="genNote" aria-live="polite"></span>
+        </div>
+        <textarea id="blurb" maxlength="4000"></textarea>
+      </section>
+
+      <div class="actions">
+        <button type="submit" class="primary" id="submitBtn" data-t="submit"></button>
+        <span class="status" id="status" aria-live="polite"></span>
+      </div>
+    </form>
+  </main>
+
+  <main id="thanksView" hidden>
+    <div class="sheet thanks" style="margin-top:24px">
+      <div class="check" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 28 28"><path d="M7 14.5l4.5 4.5L21 9" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <h2 id="thanksTitle"></h2>
+      <p data-t="thanks_sub"></p>
+    </div>
+  </main>
+</div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+const T = {
+  en:{
+    title:"Founding families",
+    lead:"We're gathering a short profile from each family interested in helping found a new community. It takes about five minutes.",
+    not_ready:"This form isn't connected yet, so submissions won't go through. Please check back soon.",
+    sec_family:"Your family", familyName:"Family name", husband:"Husband's name", wife:"Wife's name", contact:"Phone or email",
+    photo:"Family photo", photo_help:"A recent photo of the whole family. It goes at the top of your profile.",
+    photo_add:"Add a photo", photo_hint:"Tap to choose one, or drag it here", photo_replace:"Replace photo", photo_remove:"Remove",
+    photo_alt:"Your family photo", photo_working:"Preparing photo…", photo_err:"Couldn't read that photo. Try a JPG or PNG.",
+    sec_kids:"Children", kidName:"Name", kidAge:"Age", addKid:"Add a child", removeKid:"Remove child",
+    sec_about:"About you", points_label:"A few quick points",
+    points_help:"Short notes are fine: work, army service, skills, community experience, why this matters to you.",
+    point_ph:["What you each do for work","Army or security background","Skills you'd bring to a new community","Communities you've lived in or helped build","Why this matters to your family"],
+    point_ph_more:"Another point", addPoint:"Add a point", removePoint:"Remove point",
+    blurb_label:"Short blurb",
+    blurb_help:"We'll write a first draft from your points once you've added them. Change anything you like.",
+    blurb_help_off:"A few sentences introducing your family.",
+    generate:"Draft from my points", regenerate:"Redo from my points", generating:"Writing from your points…",
+    gen_need:"Add a few points first.", gen_err:"Couldn't write a draft right now. You can write it yourself, or try again.",
+    gen_busy:"Too many drafts in a short time. Try again in a few minutes.",
+    submit:"Submit profile", submitting:"Submitting…",
+    err_family:"Add your family name to continue.",
+    err_photo_up:"Couldn't upload your photo. Try again, or remove it and submit without one.",
+    err_submit:"Couldn't submit right now. Check your connection and try again. Nothing you typed is lost.",
+    thanks:n=> n ? `Thank you, ${n} family.` : "Thank you.", thanks_sub:"Your profile has been sent to the founding team. They'll be in touch."
+  },
+  he:{
+    title:"משפחות מייסדות",
+    lead:"אנחנו אוספים פרופיל קצר מכל משפחה שמעוניינת לקחת חלק בהקמת יישוב חדש. זה לוקח כחמש דקות.",
+    not_ready:"הטופס עדיין לא מחובר, ולכן לא ניתן לשלוח אותו כרגע. נסו שוב בקרוב.",
+    sec_family:"המשפחה שלכם", familyName:"שם משפחה", husband:"שם הבעל", wife:"שם האישה", contact:"טלפון או אימייל",
+    photo:"תמונה משפחתית", photo_help:"תמונה עדכנית של כל המשפחה. היא תופיע בראש הפרופיל שלכם.",
+    photo_add:"הוספת תמונה", photo_hint:"לחצו לבחירת תמונה, או גררו אותה לכאן", photo_replace:"החלפת תמונה", photo_remove:"הסרה",
+    photo_alt:"התמונה המשפחתית שלכם", photo_working:"מכין את התמונה…", photo_err:"לא ניתן לקרוא את התמונה. נסו קובץ JPG או PNG.",
+    sec_kids:"ילדים", kidName:"שם", kidAge:"גיל", addKid:"הוספת ילד/ה", removeKid:"הסרת ילד/ה",
+    sec_about:"קצת עליכם", points_label:"כמה נקודות קצרות",
+    points_help:"מספיקות הערות קצרות: עבודה, שירות צבאי, כישורים, ניסיון קהילתי, ולמה זה חשוב לכם.",
+    point_ph:["במה כל אחד מכם עובד","רקע צבאי או ביטחוני","כישורים שתביאו ליישוב חדש","קהילות שגרתם בהן או עזרתם להקים","למה זה חשוב למשפחה שלכם"],
+    point_ph_more:"נקודה נוספת", addPoint:"הוספת נקודה", removePoint:"הסרת נקודה",
+    blurb_label:"תיאור קצר",
+    blurb_help:"אחרי שתוסיפו את הנקודות, נכתוב מהן טיוטה ראשונה. אפשר לשנות בה כל דבר.",
+    blurb_help_off:"כמה משפטים שמציגים את המשפחה.",
+    generate:"כתיבת טיוטה מהנקודות", regenerate:"כתיבה מחדש מהנקודות", generating:"כותב מהנקודות שלכם…",
+    gen_need:"הוסיפו קודם כמה נקודות.", gen_err:"לא ניתן לכתוב טיוטה כרגע. אפשר לכתוב בעצמכם או לנסות שוב.",
+    gen_busy:"יותר מדי טיוטות בזמן קצר. נסו שוב בעוד כמה דקות.",
+    submit:"שליחת הפרופיל", submitting:"שולח…",
+    err_family:"הוסיפו שם משפחה כדי להמשיך.",
+    err_photo_up:"העלאת התמונה לא הצליחה. נסו שוב, או הסירו אותה ושלחו בלעדיה.",
+    err_submit:"השליחה לא הצליחה כרגע. בדקו את החיבור ונסו שוב. שום דבר ממה שכתבתם לא אבד.",
+    thanks:n=> n ? `תודה, משפחת ${n}.` : "תודה.", thanks_sub:"הפרופיל שלכם נשלח לצוות המייסד. ניצור איתכם קשר."
+  }
+};
+
+const $ = id => document.getElementById(id);
+const DRAFT_KEY = "founding-families-draft-v2";
+const BUCKET = "family-photos";
+const cfg = window.APP_CONFIG || {};
+const ready = !!(cfg.supabaseUrl && cfg.supabaseKey && window.supabase);
+const sb = ready ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey, { auth:{ persistSession:false, autoRefreshToken:false } }) : null;
+
+let state = { lang:"en", familyName:"", husband:"", wife:"", contact:"", photo:"", kids:[{name:"",age:""}], points:["","",""], blurb:"", blurbEdited:false, draftedFrom:"" };
+const isPhoto = v => typeof v==="string" && /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(v) && v.length < 4000000;
+let generating = false, submitting = false;
+
+const t = k => T[state.lang][k] ?? T.en[k];
+
+/* ---------- draft persistence ---------- */
+let draftTimer;
+function saveDraft(){
+  clearTimeout(draftTimer);
+  draftTimer = setTimeout(()=>{
+    try{ localStorage.setItem(DRAFT_KEY, JSON.stringify(state)); }
+    catch(e){ try{ localStorage.setItem(DRAFT_KEY, JSON.stringify({...state, photo:""})); }catch(e2){} }
+  }, 400);
+}
+function loadDraft(){
+  try{
+    const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
+    if(!d || typeof d!=="object") return;
+    const s = v => typeof v==="string" ? v : "";
+    state.lang = d.lang==="he" ? "he" : "en";
+    ["familyName","husband","wife","contact","blurb","draftedFrom"].forEach(k=> state[k] = s(d[k]));
+    state.blurbEdited = !!d.blurbEdited;
+    state.photo = isPhoto(d.photo) ? d.photo : "";
+    state.kids = Array.isArray(d.kids) && d.kids.length ? d.kids.map(k=>({name:s(k&&k.name), age:s(k&&String(k.age??""))})) : [{name:"",age:""}];
+    state.points = Array.isArray(d.points) && d.points.length ? d.points.map(s) : ["","",""];
+  }catch(e){}
+}
+function clearDraft(){ clearTimeout(draftTimer); try{ localStorage.removeItem(DRAFT_KEY); }catch(e){} }
+
+/* ---------- language ---------- */
+function applyLang(){
+  document.documentElement.lang = state.lang;
+  document.documentElement.dir = state.lang==="he" ? "rtl" : "ltr";
+  document.title = t("title");
+  document.querySelectorAll("[data-t]").forEach(el=>{ const v = t(el.dataset.t); if(typeof v==="string") el.textContent = v; });
+  document.querySelectorAll(".lang .seg").forEach(b=> b.setAttribute("aria-pressed", String(b.dataset.lang===state.lang)));
+  $("photoImg").alt = t("photo_alt");
+  if(!$("errPhoto").hidden) $("errPhoto").textContent = t("photo_err");
+  $("blurbHelp").textContent = ready ? t("blurb_help") : t("blurb_help_off");
+  $("submitBtn").textContent = submitting ? t("submitting") : t("submit");
+  updateGenButton();
+  renderKids(); renderPoints();
+  if(!$("thanksView").hidden) $("thanksTitle").textContent = t("thanks")(submittedName);
+}
+let submittedName = "";
+document.querySelectorAll(".lang .seg").forEach(b=> b.addEventListener("click", ()=>{
+  if(state.lang===b.dataset.lang) return;
+  state.lang = b.dataset.lang; applyLang(); saveDraft();
+}));
+
+/* ---------- photo ---------- */
+function renderPhoto(){
+  const has = !!state.photo;
+  $("drop").classList.toggle("has", has);
+  $("photoImg").hidden = !has;
+  if(has) $("photoImg").src = state.photo; else $("photoImg").removeAttribute("src");
+  $("dropEmpty").hidden = has;
+  $("photoActions").hidden = !has;
+}
+function loadImg(file){
+  return new Promise((res, rej)=>{
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = ()=>{ URL.revokeObjectURL(url); res(img); };
+    img.onerror = ()=>{ URL.revokeObjectURL(url); rej(new Error("decode")); };
+    img.src = url;
+  });
+}
+function loadBitmap(file){
+  return window.createImageBitmap ? createImageBitmap(file, {imageOrientation:"from-image"}).catch(()=> loadImg(file)) : loadImg(file);
+}
+async function prepPhoto(file){
+  const src = await loadBitmap(file);
+  const w0 = src.width, h0 = src.height;
+  if(!w0 || !h0) throw new Error("empty");
+  let out = "";
+  for(const [edge,q] of [[1800,.85],[1500,.82],[1200,.8],[1000,.75]]){
+    const k = Math.min(1, edge/Math.max(w0,h0));
+    const c = document.createElement("canvas");
+    c.width = Math.round(w0*k); c.height = Math.round(h0*k);
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "#fff"; ctx.fillRect(0,0,c.width,c.height);
+    ctx.drawImage(src, 0, 0, c.width, c.height);
+    out = c.toDataURL("image/jpeg", q);
+    if(out.length < 1400000) break; // ~1 MB file
+  }
+  if(src.close) try{ src.close(); }catch(e){}
+  if(!isPhoto(out)) throw new Error("bad");
+  return out;
+}
+async function takePhoto(file){
+  if(!file) return;
+  $("errPhoto").hidden = true;
+  if(file.type && !file.type.startsWith("image/")){ $("errPhoto").textContent = t("photo_err"); $("errPhoto").hidden = false; return; }
+  $("drop").classList.add("busy"); $("photoHint").textContent = t("photo_working");
+  try{ state.photo = await prepPhoto(file); renderPhoto(); saveDraft(); }
+  catch(e){ $("errPhoto").textContent = t("photo_err"); $("errPhoto").hidden = false; }
+  finally{ $("drop").classList.remove("busy"); $("photoHint").textContent = t("photo_hint"); $("photoInput").value = ""; }
+}
+$("photoInput").addEventListener("change", e=> takePhoto(e.target.files && e.target.files[0]));
+$("photoReplace").addEventListener("click", ()=> $("photoInput").click());
+$("photoRemove").addEventListener("click", ()=>{ state.photo = ""; renderPhoto(); saveDraft(); $("photoInput").focus(); });
+["dragenter","dragover"].forEach(ev=> $("drop").addEventListener(ev, e=>{ e.preventDefault(); $("drop").classList.add("over"); }));
+["dragleave","dragend"].forEach(ev=> $("drop").addEventListener(ev, ()=> $("drop").classList.remove("over")));
+$("drop").addEventListener("drop", e=>{
+  e.preventDefault(); $("drop").classList.remove("over");
+  takePhoto(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]);
+});
+function dataUrlToBlob(u){
+  const b64 = u.split(",")[1], bin = atob(b64), arr = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], {type:"image/jpeg"});
+}
+
+/* ---------- kids ---------- */
+const xIcon = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+function renderKids(){
+  const box = $("kids"); box.textContent = "";
+  state.kids.forEach((k,i)=>{
+    const row = document.createElement("div"); row.className = "kid";
+    const n = document.createElement("input"); n.type="text"; n.maxLength = 80; n.placeholder = t("kidName"); n.setAttribute("aria-label", t("kidName")+" "+(i+1)); n.value = k.name;
+    n.addEventListener("input", ()=>{ state.kids[i].name = n.value; saveDraft(); });
+    const a = document.createElement("input"); a.type="number"; a.min="0"; a.max="40"; a.inputMode="numeric"; a.placeholder = t("kidAge"); a.setAttribute("aria-label", t("kidAge")+" "+(i+1)); a.value = k.age;
+    a.addEventListener("input", ()=>{ state.kids[i].age = a.value; saveDraft(); });
+    const r = document.createElement("button"); r.type="button"; r.className="icon-btn"; r.innerHTML = xIcon; r.setAttribute("aria-label", t("removeKid"));
+    r.disabled = state.kids.length===1;
+    r.addEventListener("click", ()=>{ state.kids.splice(i,1); renderKids(); saveDraft(); });
+    row.append(n,a,r); box.append(row);
+  });
+}
+$("addKid").addEventListener("click", ()=>{
+  if(state.kids.length >= 20) return;
+  state.kids.push({name:"",age:""}); renderKids(); saveDraft();
+  const ins = $("kids").querySelectorAll("input[type=text]"); ins[ins.length-1].focus();
+});
+
+/* ---------- points ---------- */
+function renderPoints(){
+  const box = $("points"); box.textContent = "";
+  const ph = t("point_ph");
+  state.points.forEach((p,i)=>{
+    const row = document.createElement("div"); row.className="point";
+    const dot = document.createElement("span"); dot.className="dot";
+    const inp = document.createElement("input"); inp.type="text"; inp.maxLength = 300; inp.value = p; inp.placeholder = ph[i] || t("point_ph_more");
+    inp.setAttribute("aria-label", t("points_label")+" "+(i+1));
+    inp.addEventListener("input", ()=>{ state.points[i] = inp.value; saveDraft(); updateGenButton(); });
+    inp.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addPoint(); } });
+    const r = document.createElement("button"); r.type="button"; r.className="icon-btn"; r.innerHTML = xIcon; r.setAttribute("aria-label", t("removePoint"));
+    r.disabled = state.points.length===1;
+    r.addEventListener("click", ()=>{ state.points.splice(i,1); renderPoints(); saveDraft(); updateGenButton(); });
+    row.append(dot,inp,r); box.append(row);
+  });
+}
+function addPoint(){
+  if(state.points.length >= 30) return;
+  state.points.push(""); renderPoints(); saveDraft();
+  const ins = $("points").querySelectorAll("input"); ins[ins.length-1].focus();
+}
+$("addPoint").addEventListener("click", addPoint);
+
+/* ---------- blurb drafting ---------- */
+const cleanPoints = () => state.points.map(p=>p.trim()).filter(Boolean);
+const pointsSig = () => JSON.stringify([state.lang, cleanPoints(), state.familyName.trim(), state.husband.trim(), state.wife.trim(), state.kids.map(k=>[k.name.trim(),String(k.age).trim()])]);
+function updateGenButton(){
+  $("genRow").hidden = !ready;
+  $("genIcon").hidden = generating; $("genSpin").hidden = !generating;
+  $("genBtn").disabled = generating;
+  $("genLabel").textContent = generating ? t("generating") : (state.blurb.trim() ? t("regenerate") : t("generate"));
+}
+async function draftBlurb(auto){
+  if(!ready || generating) return;
+  const pts = cleanPoints();
+  if(!pts.length){ if(!auto) $("genNote").textContent = t("gen_need"); return; }
+  $("genNote").textContent = "";
+  const sig = pointsSig();
+  generating = true; updateGenButton();
+  $("blurb").readOnly = true;
+  try{
+    const { data, error } = await sb.functions.invoke("draft-blurb", { body:{
+      lang: state.lang,
+      familyName: state.familyName.trim(), husband: state.husband.trim(), wife: state.wife.trim(),
+      kids: state.kids.filter(k=>k.name.trim()||String(k.age).trim()).map(k=>({name:k.name.trim(), age:String(k.age).trim()})),
+      points: pts
+    }});
+    if(error){
+      let status = error.context && error.context.status;
+      $("genNote").textContent = status===429 ? t("gen_busy") : t("gen_err");
+      return;
+    }
+    const text = data && typeof data.blurb==="string" ? data.blurb.trim() : "";
+    if(!text){ $("genNote").textContent = t("gen_err"); return; }
+    // Don't clobber anything the person typed while we were drafting.
+    if(auto && state.blurbEdited && state.blurb.trim()) return;
+    state.blurb = text; state.blurbEdited = false; state.draftedFrom = sig;
+    $("blurb").value = text; saveDraft();
+  }catch(e){
+    $("genNote").textContent = t("gen_err");
+  }finally{
+    generating = false; $("blurb").readOnly = false; updateGenButton();
+  }
+}
+function maybeAutoDraft(){
+  if(!ready || generating) return;
+  if(cleanPoints().length < 2) return;
+  if(state.blurbEdited && state.blurb.trim()) return; // they've made it their own
+  if(state.draftedFrom === pointsSig() && state.blurb.trim()) return; // nothing new to draft from
+  draftBlurb(true);
+}
+$("genBtn").addEventListener("click", ()=> draftBlurb(false));
+// Draft automatically when someone finishes the points and moves on.
+$("pointsArea").addEventListener("focusout", e=>{
+  if(e.relatedTarget && $("pointsArea").contains(e.relatedTarget)) return;
+  setTimeout(maybeAutoDraft, 150);
+});
+$("blurb").addEventListener("focus", ()=>{ if(!state.blurb.trim()) maybeAutoDraft(); });
+
+/* ---------- simple fields ---------- */
+["familyName","husband","wife","contact","blurb"].forEach(id=>{
+  $(id).addEventListener("input", e=>{
+    state[id] = e.target.value;
+    if(id==="blurb"){ state.blurbEdited = true; updateGenButton(); }
+    if(id==="familyName" && e.target.value.trim()){ $("errFamily").hidden = true; e.target.classList.remove("invalid"); }
+    saveDraft();
+  });
+});
+function fillFields(){ ["familyName","husband","wife","contact","blurb"].forEach(id=> $(id).value = state[id]); }
+
+/* ---------- submit ---------- */
+$("form").addEventListener("submit", async e=>{
+  e.preventDefault();
+  if(submitting) return;
+  $("status").textContent = ""; $("status").className = "status";
+  if(!state.familyName.trim()){
+    $("errFamily").hidden = false; $("familyName").classList.add("invalid"); $("familyName").focus(); return;
+  }
+  if(!ready){ $("notReady").hidden = false; $("notReady").scrollIntoView({behavior:"smooth", block:"center"}); return; }
+  submitting = true; $("submitBtn").disabled = true; $("submitBtn").textContent = t("submitting");
+  const id = crypto.randomUUID();
+  let photo_path = null;
+  try{
+    if(state.photo){
+      const { error } = await sb.storage.from(BUCKET).upload(`${id}.jpg`, dataUrlToBlob(state.photo), { contentType:"image/jpeg", upsert:false });
+      if(error){ $("status").textContent = t("err_photo_up"); $("status").className = "status bad"; return; }
+      photo_path = `${id}.jpg`;
+    }
+    const { error } = await sb.from("families").insert({
+      id, lang: state.lang,
+      family_name: state.familyName.trim(), husband: state.husband.trim(), wife: state.wife.trim(), contact: state.contact.trim(),
+      kids: state.kids.filter(k=>k.name.trim()||String(k.age).trim()).map(k=>({name:k.name.trim(), age:String(k.age).trim()})),
+      points: cleanPoints(), blurb: state.blurb.trim(), photo_path, source:"form"
+    });
+    if(error){ $("status").textContent = t("err_submit"); $("status").className = "status bad"; return; }
+    submittedName = state.familyName.trim();
+    clearDraft();
+    $("thanksTitle").textContent = t("thanks")(submittedName);
+    $("formView").hidden = true; $("thanksView").hidden = false;
+    window.scrollTo({top:0, behavior:"smooth"});
+  }catch(err){
+    $("status").textContent = t("err_submit"); $("status").className = "status bad";
+  }finally{
+    submitting = false; $("submitBtn").disabled = false; $("submitBtn").textContent = t("submit");
+  }
+});
+
+/* ---------- boot ---------- */
+loadDraft(); fillFields(); renderPhoto(); applyLang();
+if(!ready) $("notReady").hidden = false;
+</script>
+</body>
+</html>

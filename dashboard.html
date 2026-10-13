@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dashboard · Founding families</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M4 26 L16 8 L28 26 Z' fill='%238C9C70'/><rect x='12' y='18' width='8' height='8' fill='%2326301F'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700&family=Assistant:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap" id="wrap">
+
+  <main id="loginView" class="login" hidden>
+    <h1>Founding families</h1>
+    <p class="lead" style="margin-bottom:20px">Sign in to see the profiles families have submitted.</p>
+    <p class="banner" id="notReady" hidden>The site isn't connected to the database yet. Add your Supabase details to config.js.</p>
+    <form class="sheet" id="loginForm" novalidate style="padding-top:22px">
+      <label class="f"><span class="lbl">Email</span><input type="email" id="email" autocomplete="username" required></label>
+      <label class="f"><span class="lbl">Password</span><input type="password" id="password" autocomplete="current-password" required></label>
+      <button type="submit" class="primary" id="loginBtn" style="width:100%">Sign in</button>
+      <p class="err" id="loginErr" hidden></p>
+    </form>
+  </main>
+
+  <main id="dashView" hidden>
+    <div class="dash-head">
+      <div>
+        <h1>Founding families</h1>
+        <p class="dash-stats" id="stats"></p>
+      </div>
+      <div class="dash-tools">
+        <button type="button" class="ghost" id="refreshBtn">Refresh</button>
+        <button type="button" class="ghost" id="csvBtn">Export spreadsheet</button>
+        <button type="button" class="plain" id="signOutBtn">Sign out</button>
+      </div>
+    </div>
+    <p class="banner" id="noAccess" hidden>You're signed in, but this account isn't on the dashboard's access list. Add its email to the dashboard_admins table in Supabase.</p>
+    <p class="err" id="loadErr" hidden style="margin-bottom:14px"></p>
+    <input type="search" class="search" id="search" placeholder="Search by name, skill, or anything they wrote" aria-label="Search profiles" autocomplete="off">
+    <div class="cards" id="cards"></div>
+  </main>
+</div>
+
+<dialog id="detail" aria-labelledby="dName">
+  <div class="dlg">
+    <div class="dlg-top">
+      <div><h2 id="dName" dir="auto"></h2><p class="who" id="dWho" dir="auto"></p></div>
+      <button type="button" class="icon-btn close" id="dClose" aria-label="Close"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+    </div>
+    <img id="dPhoto" class="fam" alt="" hidden>
+    <p class="dmeta" id="dContact" dir="auto"></p>
+    <h3 class="dsec" id="dAboutH">About</h3>
+    <p class="blurb" id="dBlurb" dir="auto"></p>
+    <h3 class="dsec" id="dPointsH">Their points</h3>
+    <ul id="dPoints" dir="auto"></ul>
+    <p class="dmeta" id="dMeta"></p>
+    <div class="rbtns">
+      <button type="button" class="ghost" id="dCopy">Copy profile</button>
+      <button type="button" class="ghost" id="dDlPhoto" hidden>Download photo</button>
+      <span class="spacer"></span>
+      <button type="button" class="plain danger" id="dDelete">Delete</button>
+    </div>
+  </div>
+</dialog>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const BUCKET = "family-photos";
+const cfg = window.APP_CONFIG || {};
+const ready = !!(cfg.supabaseUrl && cfg.supabaseKey && window.supabase);
+const sb = ready ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey, { auth:{ persistSession:true, storageKey:"ff-dashboard" } }) : null;
+
+let families = [], photoUrls = {}, current = null, loading = false;
+
+/* ---------- helpers ---------- */
+const kidsOf = f => Array.isArray(f.kids) ? f.kids.filter(k=>k && (k.name||k.age)) : [];
+const pointsOf = f => Array.isArray(f.points) ? f.points.filter(p=>typeof p==="string" && p.trim()) : [];
+const isHe = s => /[֐-׿]/.test(s||"");
+const familyTitle = f => {
+  const n = (f.family_name||"").trim() || "Unnamed";
+  return isHe(n) ? `משפחת ${n}` : `The ${n} family`;
+};
+const parentsOf = f => [f.husband, f.wife].filter(Boolean).join(isHe(f.husband+f.wife) ? " ו" : " & ");
+const kidsLine = f => kidsOf(f).map(k=> (k.name||"?") + (k.age!=="" && k.age!=null ? ` (${k.age})` : "")).join(", ");
+const fmtDate = s => s ? new Date(s).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}) : "";
+
+function profileText(f){
+  const lines = [familyTitle(f)];
+  const p = parentsOf(f); if(p) lines.push(p);
+  const k = kidsLine(f); if(k) lines.push("Children: " + k);
+  if(f.contact) lines.push("Contact: " + f.contact);
+  if(f.blurb){ lines.push(""); lines.push(f.blurb.trim()); }
+  const pts = pointsOf(f);
+  if(pts.length){ lines.push(""); pts.forEach(x=> lines.push("• " + x.trim())); }
+  return lines.join("\n");
+}
+async function copyText(text, btn){
+  let ok = false;
+  try{ await navigator.clipboard.writeText(text); ok = true; }catch(e){
+    try{ const ta = document.createElement("textarea"); ta.value = text; ta.style.position="fixed"; ta.style.opacity="0"; document.body.append(ta); ta.select(); ok = document.execCommand("copy"); ta.remove(); }catch(e2){}
+  }
+  if(btn){ const old = btn.textContent; btn.textContent = ok ? "Copied" : "Couldn't copy"; setTimeout(()=> btn.textContent = old, 1600); }
+}
+
+/* ---------- auth ---------- */
+function show(view){
+  $("loginView").hidden = view!=="login";
+  $("dashView").hidden = view!=="dash";
+  $("wrap").classList.toggle("wide", view==="dash");
+}
+$("loginForm").addEventListener("submit", async e=>{
+  e.preventDefault();
+  if(!ready) return;
+  $("loginErr").hidden = true;
+  $("loginBtn").disabled = true; $("loginBtn").textContent = "Signing in…";
+  const { error } = await sb.auth.signInWithPassword({ email: $("email").value.trim(), password: $("password").value });
+  $("loginBtn").disabled = false; $("loginBtn").textContent = "Sign in";
+  if(error){ $("loginErr").textContent = "That email and password didn't match. Try again."; $("loginErr").hidden = false; return; }
+  $("password").value = "";
+  enterDashboard();
+});
+$("signOutBtn").addEventListener("click", async ()=>{
+  await sb.auth.signOut();
+  families = []; photoUrls = {};
+  show("login");
+});
+
+/* ---------- data ---------- */
+async function enterDashboard(){
+  show("dash");
+  const { data: isAdmin } = await sb.rpc("is_dashboard_admin");
+  $("noAccess").hidden = !!isAdmin;
+  $("search").hidden = !isAdmin;
+  $("csvBtn").hidden = !isAdmin;
+  if(!isAdmin){ $("cards").textContent = ""; $("stats").textContent = ""; return; }
+  await load();
+}
+async function load(){
+  if(loading) return;
+  loading = true; $("refreshBtn").disabled = true; $("refreshBtn").textContent = "Refreshing…";
+  $("loadErr").hidden = true;
+  try{
+    const { data, error } = await sb.from("families").select("*").order("created_at", { ascending:false });
+    if(error) throw error;
+    families = data || [];
+    const paths = families.map(f=>f.photo_path).filter(p=> p && !photoUrls[p]);
+    if(paths.length){
+      const { data: signed } = await sb.storage.from(BUCKET).createSignedUrls(paths, 60*60*6);
+      (signed||[]).forEach(s=>{ if(s && s.signedUrl && s.path) photoUrls[s.path] = s.signedUrl; });
+    }
+    render();
+  }catch(err){
+    $("loadErr").textContent = "Couldn't load profiles. Check your connection and refresh.";
+    $("loadErr").hidden = false;
+  }finally{
+    loading = false; $("refreshBtn").disabled = false; $("refreshBtn").textContent = "Refresh";
+  }
+}
+$("refreshBtn").addEventListener("click", load);
+window.addEventListener("focus", ()=>{ if(!$("dashView").hidden && !$("search").hidden && !$("detail").open) load(); });
+
+/* ---------- render ---------- */
+function render(){
+  const nKids = families.reduce((s,f)=> s + kidsOf(f).length, 0);
+  $("stats").textContent = families.length
+    ? `${families.length} ${families.length===1?"family":"families"} and ${nKids} ${nKids===1?"child":"children"} so far. Latest on ${fmtDate(families[0].created_at)}.`
+    : "No profiles yet.";
+  const q = $("search").value.trim().toLowerCase();
+  const list = q ? families.filter(f=> [f.family_name,f.husband,f.wife,f.contact,f.blurb,kidsLine(f),...pointsOf(f)].join(" ").toLowerCase().includes(q)) : families;
+  const box = $("cards"); box.textContent = "";
+  if(!list.length){
+    const p = document.createElement("p"); p.className = "empty";
+    p.textContent = families.length ? "No profiles match that search." : "No profiles yet. Share the form link and they'll show up here as families submit.";
+    box.append(p); return;
+  }
+  list.forEach(f=>{
+    const b = document.createElement("button"); b.type = "button"; b.className = "card";
+    b.setAttribute("aria-label", "Open " + familyTitle(f));
+    const ph = document.createElement("div"); ph.className = "ph";
+    const url = f.photo_path && photoUrls[f.photo_path];
+    if(url){ const img = document.createElement("img"); img.src = url; img.alt = ""; img.loading = "lazy"; ph.append(img); }
+    else { const m = document.createElement("span"); m.className = "mono"; m.textContent = ((f.family_name||"?").trim()[0]||"?").toUpperCase(); ph.append(m); }
+    const body = document.createElement("div"); body.className = "body";
+    const nm = document.createElement("span"); nm.className = "nm"; nm.dir = "auto"; nm.textContent = familyTitle(f);
+    const sub = document.createElement("span"); sub.className = "sub"; sub.dir = "auto"; sub.textContent = parentsOf(f) || " ";
+    const n = kidsOf(f).length;
+    const sub2 = document.createElement("span"); sub2.className = "sub";
+    sub2.textContent = (n ? `${n} ${n===1?"child":"children"}` : "No children listed") + ", " + fmtDate(f.created_at);
+    body.append(nm, sub, sub2);
+    b.append(ph, body);
+    b.addEventListener("click", ()=> openDetail(f));
+    box.append(b);
+  });
+}
+$("search").addEventListener("input", render);
+
+/* ---------- detail ---------- */
+function openDetail(f){
+  current = f;
+  $("dName").textContent = familyTitle(f);
+  const kids = kidsLine(f);
+  $("dWho").textContent = [parentsOf(f), kids ? "Children: " + kids : ""].filter(Boolean).join(". ");
+  const url = f.photo_path && photoUrls[f.photo_path];
+  $("dPhoto").hidden = !url; if(url) $("dPhoto").src = url; else $("dPhoto").removeAttribute("src");
+  $("dPhoto").alt = url ? familyTitle(f) + " photo" : "";
+  $("dDlPhoto").hidden = !f.photo_path;
+  $("dContact").textContent = f.contact ? "Contact: " + f.contact : "";
+  $("dBlurb").textContent = (f.blurb||"").trim();
+  $("dAboutH").hidden = $("dBlurb").hidden = !(f.blurb||"").trim();
+  const ul = $("dPoints"); ul.textContent = "";
+  pointsOf(f).forEach(p=>{ const li = document.createElement("li"); li.textContent = p; ul.append(li); });
+  $("dPointsH").hidden = ul.hidden = !ul.children.length;
+  $("dMeta").textContent = `Submitted ${fmtDate(f.created_at)}, filled in ${f.lang==="he"?"Hebrew":"English"}.`;
+  $("detail").showModal();
+}
+$("dClose").addEventListener("click", ()=> $("detail").close());
+$("detail").addEventListener("click", e=>{ if(e.target === $("detail")) $("detail").close(); });
+$("dCopy").addEventListener("click", ()=> current && copyText(profileText(current), $("dCopy")));
+$("dDlPhoto").addEventListener("click", async ()=>{
+  if(!current || !current.photo_path) return;
+  const fname = ((current.family_name||"family").replace(/[^\p{L}\p{N}_-]+/gu,"-")) + "-family-photo.jpg";
+  const { data, error } = await sb.storage.from(BUCKET).createSignedUrl(current.photo_path, 120, { download: fname });
+  if(error || !data) return;
+  const a = document.createElement("a"); a.href = data.signedUrl; a.rel = "noopener"; document.body.append(a); a.click(); a.remove();
+});
+$("dDelete").addEventListener("click", async ()=>{
+  if(!current) return;
+  if(!confirm(`Delete ${familyTitle(current)}'s profile? This can't be undone.`)) return;
+  const f = current;
+  $("dDelete").disabled = true;
+  try{
+    if(f.photo_path) await sb.storage.from(BUCKET).remove([f.photo_path]);
+    const { error } = await sb.from("families").delete().eq("id", f.id);
+    if(error) throw error;
+    families = families.filter(x=> x.id !== f.id);
+    $("detail").close(); render();
+  }catch(e){
+    alert("Couldn't delete that profile. Try again.");
+  }finally{ $("dDelete").disabled = false; }
+});
+
+/* ---------- CSV ---------- */
+$("csvBtn").addEventListener("click", ()=>{
+  const esc = v => { const s = String(v ?? ""); return /[",\n\r]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; };
+  const rows = [["Submitted","Family name","Husband","Wife","Children","Contact","Blurb","Points","Language","Has photo"]];
+  families.forEach(f=> rows.push([
+    f.created_at ? new Date(f.created_at).toISOString().slice(0,10) : "",
+    f.family_name, f.husband, f.wife, kidsLine(f), f.contact, f.blurb,
+    pointsOf(f).join(" | "), f.lang==="he" ? "Hebrew" : "English", f.photo_path ? "Yes" : "No"
+  ]));
+  const csv = "﻿" + rows.map(r=> r.map(esc).join(",")).join("\r\n");
+  const url = URL.createObjectURL(new Blob([csv], {type:"text/csv;charset=utf-8"}));
+  const a = document.createElement("a"); a.href = url; a.download = `founding-families-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.append(a); a.click(); a.remove(); setTimeout(()=> URL.revokeObjectURL(url), 2000);
+});
+
+/* ---------- boot ---------- */
+(async ()=>{
+  if(!ready){ show("login"); $("notReady").hidden = false; $("loginBtn").disabled = true; return; }
+  const { data } = await sb.auth.getSession();
+  if(data && data.session) enterDashboard(); else show("login");
+})();
+</script>
+</body>
+</html>

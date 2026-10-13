@@ -55,6 +55,11 @@
     <p class="dmeta" id="dContact" dir="auto"></p>
     <h3 class="dsec" id="dAboutH">About</h3>
     <p class="blurb" id="dBlurb" dir="auto"></p>
+    <div class="gen-row" id="dGenRow" style="margin-top:10px">
+      <button type="button" class="ghost" id="dGenEn"><span class="spin" id="dGenSpin" hidden></span><span id="dGenLabel">Write blurb</span></button>
+      <button type="button" class="ghost" id="dGenHe">בעברית</button>
+      <span class="note" id="dGenNote" aria-live="polite"></span>
+    </div>
     <h3 class="dsec" id="dPointsH">Their points</h3>
     <ul id="dPoints" dir="auto"></ul>
     <p class="dmeta" id="dMeta"></p>
@@ -212,13 +217,41 @@ function openDetail(f){
   $("dDlPhoto").hidden = !f.photo_path;
   $("dContact").textContent = f.contact ? "Contact: " + f.contact : "";
   $("dBlurb").textContent = (f.blurb||"").trim();
-  $("dAboutH").hidden = $("dBlurb").hidden = !(f.blurb||"").trim();
+  $("dAboutH").hidden = !(f.blurb||"").trim();
+  $("dBlurb").hidden = !(f.blurb||"").trim();
+  $("dGenRow").hidden = !pointsOf(f).length;
+  $("dGenLabel").textContent = (f.blurb||"").trim() ? "Rewrite blurb" : "Write blurb";
+  $("dGenNote").textContent = "";
   const ul = $("dPoints"); ul.textContent = "";
   pointsOf(f).forEach(p=>{ const li = document.createElement("li"); li.textContent = p; ul.append(li); });
   $("dPointsH").hidden = ul.hidden = !ul.children.length;
   $("dMeta").textContent = `Submitted ${fmtDate(f.created_at)}, filled in ${f.lang==="he"?"Hebrew":"English"}.`;
   $("detail").showModal();
 }
+let drafting = false;
+async function draftFor(lang){
+  if(!current || drafting) return;
+  const f = current;
+  drafting = true; $("dGenEn").disabled = $("dGenHe").disabled = true; $("dGenSpin").hidden = false; $("dGenNote").textContent = "";
+  try{
+    const { data, error } = await sb.functions.invoke("draft-blurb", { body:{
+      lang, familyName: f.family_name||"", husband: f.husband||"", wife: f.wife||"", kids: kidsOf(f), points: pointsOf(f)
+    }});
+    const text = !error && data && typeof data.blurb==="string" ? data.blurb.trim() : "";
+    if(!text){ $("dGenNote").textContent = "Couldn't write a blurb right now. Try again in a moment."; return; }
+    const { error: upErr } = await sb.from("families").update({ blurb: text }).eq("id", f.id);
+    if(upErr){ $("dGenNote").textContent = "Wrote a blurb but couldn't save it. Try again."; return; }
+    f.blurb = text;
+    $("dBlurb").textContent = text; $("dBlurb").hidden = false; $("dAboutH").hidden = false;
+    $("dGenLabel").textContent = "Rewrite blurb"; $("dGenNote").textContent = "Saved.";
+  }catch(e){
+    $("dGenNote").textContent = "Couldn't write a blurb right now. Try again in a moment.";
+  }finally{
+    drafting = false; $("dGenEn").disabled = $("dGenHe").disabled = false; $("dGenSpin").hidden = true;
+  }
+}
+$("dGenEn").addEventListener("click", ()=> draftFor("en"));
+$("dGenHe").addEventListener("click", ()=> draftFor("he"));
 $("dClose").addEventListener("click", ()=> $("detail").close());
 $("detail").addEventListener("click", e=>{ if(e.target === $("detail")) $("detail").close(); });
 $("dCopy").addEventListener("click", ()=> current && copyText(profileText(current), $("dCopy")));

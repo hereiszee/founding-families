@@ -4,7 +4,7 @@
 // Optional secrets: ANTHROPIC_MODEL (default claude-sonnet-5-5),
 // ALLOWED_ORIGIN (e.g. https://yourname.github.io) to only answer your site.
 
-const MODEL = Deno.env.get("ANTHROPIC_MODEL") ?? "claude-sonnet-5-5";
+const MODEL = Deno.env.get("ANTHROPIC_MODEL") ?? "claude-sonnet-4-5";
 const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") ?? "*";
 
 const cors = {
@@ -28,6 +28,22 @@ function limited(ip: string) {
 }
 
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+
+// Pull every piece of text out of a Messages API response, whatever block shapes it uses.
+function extractText(data: any): string {
+  const out: string[] = [];
+  const walk = (n: any) => {
+    if (!n) return;
+    if (Array.isArray(n)) { n.forEach(walk); return; }
+    if (typeof n === "object") {
+      if (n.type === "text" && typeof n.text === "string") out.push(n.text);
+      else if (n.type === "thinking" || n.type === "redacted_thinking") return;
+      else { if (Array.isArray(n.content)) walk(n.content); if (Array.isArray(n.blocks)) walk(n.blocks); }
+    }
+  };
+  walk(data?.content);
+  return out.join("").trim();
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -85,9 +101,11 @@ Deno.serve(async (req) => {
       return json({ error: "upstream" }, 502);
     }
     const data = await r.json();
-    const blurb = (data.content ?? [])
-      .filter((b: any) => b.type === "text").map((b: any) => b.text).join("").trim();
-    if (!blurb) return json({ error: "empty" }, 502);
+    const blurb = extractText(data);
+    if (!blurb) {
+      console.error("empty answer from anthropic", JSON.stringify(data).slice(0, 1500));
+      return json({ error: "empty", stop: data?.stop_reason ?? null, model: data?.model ?? null }, 502);
+    }
     return json({ blurb });
   } catch (e) {
     console.error(e);

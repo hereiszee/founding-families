@@ -10,7 +10,8 @@ alter table public.dashboard_admins enable row level security;
 -- (No policies on purpose: this list is only editable from the Supabase dashboard.)
 
 insert into public.dashboard_admins (email) values
-  ('zee@actuateventures.co')
+  ('zee@actuateventures.co'),
+  ('zee.schwab@gmail.com')
 on conflict do nothing;
 
 create or replace function public.is_dashboard_admin()

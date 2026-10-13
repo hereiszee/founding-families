@@ -66,15 +66,16 @@
             <input type="text" id="familyName" autocomplete="family-name" maxlength="120">
             <span class="err" id="errFamily" hidden data-t="err_family" style="display:block"></span>
           </label>
-          <label class="f"><span class="lbl" data-t="husband"></span><input type="text" id="husband" maxlength="120"></label>
-          <label class="f"><span class="lbl" data-t="wife"></span><input type="text" id="wife" maxlength="120"></label>
-          <label class="f full"><span class="lbl" data-t="contact"></span><input type="text" id="contact" autocomplete="email" maxlength="200"></label>
+          <label class="f"><span class="lbl" data-t="husband"></span><input type="text" id="husband" maxlength="120"><span class="err" id="errHusband" hidden style="display:block"></span></label>
+          <label class="f"><span class="lbl" data-t="wife"></span><input type="text" id="wife" maxlength="120"><span class="err" id="errWife" hidden style="display:block"></span></label>
+          <label class="f full"><span class="lbl" data-t="contact"></span><input type="text" id="contact" autocomplete="email" maxlength="200" inputmode="email"><span class="err" id="errContact" hidden style="display:block"></span></label>
         </div>
       </section>
 
       <section class="block">
         <h2 data-t="sec_kids"></h2>
         <div id="kids"></div>
+        <p class="err" id="errKids" hidden></p>
         <button type="button" class="add" id="addKid" data-t="addKid"></button>
       </section>
 
@@ -85,6 +86,7 @@
         <div id="pointsArea">
           <div id="points"></div>
           <button type="button" class="add" id="addPoint" data-t="addPoint"></button>
+          <p class="err" id="errPoints" hidden></p>
         </div>
 
         <div style="height:24px"></div>
@@ -125,11 +127,11 @@ const T = {
     title:"Founding families",
     lead:"We're gathering a short profile from each family interested in being a founding member of a new community on a new hilltop. To get a hilltop approved, we first have to show there are real families ready to move onto it, and these profiles are how we show it. It takes about five minutes.",
     not_ready:"This form isn't connected yet, so submissions won't go through. Please check back soon.",
-    sec_family:"Your family", familyName:"Family name", husband:"Husband's name", wife:"Wife's name", contact:"Phone or email",
+    sec_family:"Your family", familyName:"Family name", husband:"Husband's name", wife:"Wife's name", contact:"Phone or email (so we can reach you)",
     photo:"Family photo", photo_help:"A recent photo of the whole family. It goes at the top of your profile.",
     photo_add:"Add a photo", photo_hint:"Tap to choose one, or drag it here", photo_replace:"Replace photo", photo_remove:"Remove",
     photo_alt:"Your family photo", photo_working:"Preparing photo…", photo_err:"Couldn't read that photo. Try a JPG or PNG.",
-    sec_kids:"Children", kidName:"Name", kidAge:"Age", addKid:"Add a child", removeKid:"Remove child",
+    sec_kids:"Children (if any)", kidName:"Name", kidAge:"Age", addKid:"Add a child", removeKid:"Remove child",
     sec_about:"About you", points_label:"A few quick points",
     points_help:"Short notes are fine: work, army service, skills, community experience, why this matters to you.",
     point_ph:["What you each do for work","Army or security background","Skills you'd bring to a new community","Communities you've lived in or helped build","Why this matters to your family"],
@@ -142,6 +144,11 @@ const T = {
     gen_busy:"Too many drafts in a short time. Try again in a few minutes.",
     submit:"Submit profile", submitting:"Submitting…",
     err_family:"Add your family name to continue.",
+    err_husband:"Add the husband's name.", err_wife:"Add the wife's name.",
+    err_contact:"Add a phone number or email address so we can reach you.",
+    err_contact_fmt:"That doesn't look like a phone number or email address. Check it and try again.",
+    err_photo_req:"Add a family photo to continue.", err_points:"Add at least one point about your family.",
+    err_age:"Ages go up to 20.", err_fix:"A few fields still need attention.",
     err_photo_up:"Couldn't upload your photo. Try again, or remove it and submit without one.",
     err_submit:"Couldn't submit right now. Check your connection and try again. Nothing you typed is lost.",
     err_limit:"It looks like a profile has already been submitted from this connection. If that's a mistake, contact whoever sent you this form.",
@@ -151,11 +158,11 @@ const T = {
     title:"משפחות מייסדות",
     lead:"אנחנו אוספים פרופיל קצר מכל משפחה שמעוניינת להיות בין המשפחות המייסדות של גבעה חדשה. כדי לקבל אישור לגבעה, צריך קודם להראות שיש משפחות אמיתיות שמוכנות לעלות אליה, והפרופילים האלה הם הדרך להראות את זה. זה לוקח כחמש דקות.",
     not_ready:"הטופס עדיין לא מחובר, ולכן לא ניתן לשלוח אותו כרגע. נסו שוב בקרוב.",
-    sec_family:"המשפחה שלכם", familyName:"שם משפחה", husband:"שם הבעל", wife:"שם האישה", contact:"טלפון או אימייל",
+    sec_family:"המשפחה שלכם", familyName:"שם משפחה", husband:"שם הבעל", wife:"שם האישה", contact:"טלפון או אימייל (כדי שנוכל ליצור קשר)",
     photo:"תמונה משפחתית", photo_help:"תמונה עדכנית של כל המשפחה. היא תופיע בראש הפרופיל שלכם.",
     photo_add:"הוספת תמונה", photo_hint:"לחצו לבחירת תמונה, או גררו אותה לכאן", photo_replace:"החלפת תמונה", photo_remove:"הסרה",
     photo_alt:"התמונה המשפחתית שלכם", photo_working:"מכין את התמונה…", photo_err:"לא ניתן לקרוא את התמונה. נסו קובץ JPG או PNG.",
-    sec_kids:"ילדים", kidName:"שם", kidAge:"גיל", addKid:"הוספת ילד/ה", removeKid:"הסרת ילד/ה",
+    sec_kids:"ילדים (אם יש)", kidName:"שם", kidAge:"גיל", addKid:"הוספת ילד/ה", removeKid:"הסרת ילד/ה",
     sec_about:"קצת עליכם", points_label:"כמה נקודות קצרות",
     points_help:"מספיקות הערות קצרות: עבודה, שירות צבאי, כישורים, ניסיון קהילתי, ולמה זה חשוב לכם.",
     point_ph:["במה כל אחד מכם עובד","רקע צבאי או ביטחוני","כישורים שתביאו ליישוב חדש","קהילות שגרתם בהן או עזרתם להקים","למה זה חשוב למשפחה שלכם"],
@@ -168,6 +175,11 @@ const T = {
     gen_busy:"יותר מדי טיוטות בזמן קצר. נסו שוב בעוד כמה דקות.",
     submit:"שליחת הפרופיל", submitting:"שולח…",
     err_family:"הוסיפו שם משפחה כדי להמשיך.",
+    err_husband:"הוסיפו את שם הבעל.", err_wife:"הוסיפו את שם האישה.",
+    err_contact:"הוסיפו מספר טלפון או כתובת אימייל כדי שנוכל ליצור קשר.",
+    err_contact_fmt:"זה לא נראה כמו מספר טלפון או כתובת אימייל. בדקו ונסו שוב.",
+    err_photo_req:"הוסיפו תמונה משפחתית כדי להמשיך.", err_points:"הוסיפו לפחות נקודה אחת על המשפחה.",
+    err_age:"הגיל המקסימלי הוא 20.", err_fix:"כמה שדות עדיין צריכים תיקון.",
     err_photo_up:"העלאת התמונה לא הצליחה. נסו שוב, או הסירו אותה ושלחו בלעדיה.",
     err_submit:"השליחה לא הצליחה כרגע. בדקו את החיבור ונסו שוב. שום דבר ממה שכתבתם לא אבד.",
     err_limit:"נראה שכבר נשלח פרופיל מהחיבור הזה. אם זו טעות, פנו למי ששלח לכם את הטופס.",
@@ -219,7 +231,7 @@ function applyLang(){
   document.querySelectorAll("[data-t]").forEach(el=>{ const v = t(el.dataset.t); if(typeof v==="string") el.textContent = v; });
   document.querySelectorAll(".lang .seg").forEach(b=> b.setAttribute("aria-pressed", String(b.dataset.lang===state.lang)));
   $("photoImg").alt = t("photo_alt");
-  if(!$("errPhoto").hidden) $("errPhoto").textContent = t("photo_err");
+  if(!$("errPhoto").hidden && !state.photo) $("errPhoto").textContent = t("err_photo_req");
   $("blurbHelp").textContent = ready ? t("blurb_help") : t("blurb_help_off");
   $("submitBtn").textContent = submitting ? t("submitting") : t("submit");
   updateGenButton();
@@ -276,7 +288,7 @@ async function takePhoto(file){
   $("errPhoto").hidden = true;
   if(file.type && !file.type.startsWith("image/")){ $("errPhoto").textContent = t("photo_err"); $("errPhoto").hidden = false; return; }
   $("drop").classList.add("busy"); $("photoHint").textContent = t("photo_working");
-  try{ state.photo = await prepPhoto(file); renderPhoto(); saveDraft(); }
+  try{ state.photo = await prepPhoto(file); renderPhoto(); saveDraft(); $("errPhoto").hidden = true; }
   catch(e){ $("errPhoto").textContent = t("photo_err"); $("errPhoto").hidden = false; }
   finally{ $("drop").classList.remove("busy"); $("photoHint").textContent = t("photo_hint"); $("photoInput").value = ""; }
 }
@@ -298,8 +310,13 @@ function renderKids(){
     const row = document.createElement("div"); row.className = "kid";
     const n = document.createElement("input"); n.type="text"; n.maxLength = 80; n.placeholder = t("kidName"); n.setAttribute("aria-label", t("kidName")+" "+(i+1)); n.value = k.name;
     n.addEventListener("input", ()=>{ state.kids[i].name = n.value; saveDraft(); });
-    const a = document.createElement("input"); a.type="number"; a.min="0"; a.max="40"; a.inputMode="numeric"; a.placeholder = t("kidAge"); a.setAttribute("aria-label", t("kidAge")+" "+(i+1)); a.value = k.age;
-    a.addEventListener("input", ()=>{ state.kids[i].age = a.value; saveDraft(); });
+    const a = document.createElement("input"); a.type="number"; a.min="0"; a.max="20"; a.inputMode="numeric"; a.placeholder = t("kidAge"); a.setAttribute("aria-label", t("kidAge")+" "+(i+1)); a.value = k.age;
+    a.addEventListener("input", ()=>{
+      if(a.value !== "" && Number(a.value) > 20){ a.value = "20"; $("errKids").textContent = t("err_age"); $("errKids").hidden = false; }
+      else if(a.value !== "" && Number(a.value) < 0){ a.value = "0"; }
+      else $("errKids").hidden = true;
+      state.kids[i].age = a.value; saveDraft();
+    });
     const r = document.createElement("button"); r.type="button"; r.className="icon-btn"; r.innerHTML = xIcon; r.setAttribute("aria-label", t("removeKid"));
     r.disabled = state.kids.length===1;
     r.addEventListener("click", ()=>{ state.kids.splice(i,1); renderKids(); saveDraft(); });
@@ -397,20 +414,44 @@ $("blurb").addEventListener("focus", ()=>{ if(!state.blurb.trim()) maybeAutoDraf
   $(id).addEventListener("input", e=>{
     state[id] = e.target.value;
     if(id==="blurb"){ state.blurbEdited = true; updateGenButton(); }
-    if(id==="familyName" && e.target.value.trim()){ $("errFamily").hidden = true; e.target.classList.remove("invalid"); }
+    const errId = {familyName:"errFamily", husband:"errHusband", wife:"errWife", contact:"errContact"}[id];
+    if(errId && e.target.value.trim()){ $(errId).hidden = true; e.target.classList.remove("invalid"); }
     saveDraft();
   });
 });
 function fillFields(){ ["familyName","husband","wife","contact","blurb"].forEach(id=> $(id).value = state[id]); }
+
+/* ---------- validation ---------- */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+function looksLikePhone(v){ const d = v.replace(/\D/g,""); return /^[+\d\s().-]+$/.test(v) && d.length >= 7 && d.length <= 15; }
+function validate(){
+  let first = null;
+  const mark = (id, errId, msg) => { $(errId).textContent = msg; $(errId).hidden = false; if(id){ $(id).classList.add("invalid"); } first = first || (id ? $(id) : $(errId)); };
+  ["errFamily","errHusband","errWife","errContact","errPhoto","errPoints"].forEach(x=> $(x).hidden = true);
+  ["familyName","husband","wife","contact"].forEach(x=> $(x).classList.remove("invalid"));
+  if(!state.photo) mark(null, "errPhoto", t("err_photo_req"));
+  if(!state.familyName.trim()) mark("familyName", "errFamily", t("err_family"));
+  if(!state.husband.trim()) mark("husband", "errHusband", t("err_husband"));
+  if(!state.wife.trim()) mark("wife", "errWife", t("err_wife"));
+  const c = state.contact.trim();
+  if(!c) mark("contact", "errContact", t("err_contact"));
+  else if(!(EMAIL_RE.test(c) || looksLikePhone(c))) mark("contact", "errContact", t("err_contact_fmt"));
+  if(!cleanPoints().length) mark(null, "errPoints", t("err_points"));
+  if(first){
+    $("status").textContent = t("err_fix"); $("status").className = "status bad";
+    first.scrollIntoView({behavior:"smooth", block:"center"});
+    if(first.focus && first.tagName==="INPUT") first.focus({preventScroll:true});
+    return false;
+  }
+  return true;
+}
 
 /* ---------- submit ---------- */
 $("form").addEventListener("submit", async e=>{
   e.preventDefault();
   if(submitting) return;
   $("status").textContent = ""; $("status").className = "status";
-  if(!state.familyName.trim()){
-    $("errFamily").hidden = false; $("familyName").classList.add("invalid"); $("familyName").focus(); return;
-  }
+  if(!validate()) return;
   if(!ready){ $("notReady").hidden = false; $("notReady").scrollIntoView({behavior:"smooth", block:"center"}); return; }
   submitting = true; $("submitBtn").disabled = true; $("submitBtn").textContent = t("submitting");
   try{

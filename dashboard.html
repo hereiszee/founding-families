@@ -237,8 +237,17 @@ async function draftFor(lang){
     const { data, error } = await sb.functions.invoke("draft-blurb", { body:{
       lang, familyName: f.family_name||"", husband: f.husband||"", wife: f.wife||"", kids: kidsOf(f), points: pointsOf(f)
     }});
-    const text = !error && data && typeof data.blurb==="string" ? data.blurb.trim() : "";
-    if(!text){ $("dGenNote").textContent = "Couldn't write a blurb right now. Try again in a moment."; return; }
+    if(error){
+      const status = error.context && error.context.status;
+      let code = ""; try{ code = (await error.context.json()).error; }catch(e){}
+      const why = status===429 ? "Too many drafts in a short time. Wait a few minutes and try again."
+        : code==="not_configured" ? "The ANTHROPIC_API_KEY secret isn't set in Supabase."
+        : code==="upstream" ? "Anthropic rejected the request. Check the API key and billing in the Anthropic console."
+        : `Couldn't write a blurb (${status||"no response"}${code?", "+code:""}).`;
+      $("dGenNote").textContent = why; return;
+    }
+    const text = data && typeof data.blurb==="string" ? data.blurb.trim() : "";
+    if(!text){ $("dGenNote").textContent = "The draft came back empty. Try again."; return; }
     const { error: upErr } = await sb.from("families").update({ blurb: text }).eq("id", f.id);
     if(upErr){ $("dGenNote").textContent = "Wrote a blurb but couldn't save it. Try again."; return; }
     f.blurb = text;

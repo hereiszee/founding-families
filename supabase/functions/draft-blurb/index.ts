@@ -16,7 +16,7 @@ const cors = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
-// Best-effort rate limit per visitor (per running instance): 8 drafts per 10 minutes.
+// Best-effort rate limit per visitor (per running instance): 30 drafts per 10 minutes.
 const hits = new Map<string, number[]>();
 function limited(ip: string) {
   const now = Date.now(), win = 10 * 60 * 1000;
@@ -24,7 +24,7 @@ function limited(ip: string) {
   list.push(now);
   hits.set(ip, list);
   if (hits.size > 5000) hits.clear();
-  return list.length > 8;
+  return list.length > 30;
 }
 
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");

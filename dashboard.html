@@ -38,10 +38,19 @@
         <button type="button" class="plain" id="signOutBtn">Sign out</button>
       </div>
     </div>
+    <nav class="tabs" aria-label="Dashboard sections"><button type="button" class="tab on" id="tabProfiles">Profiles</button><button type="button" class="tab" id="tabVisits">Data room visits</button></nav>
     <p class="banner" id="noAccess" hidden>You're signed in, but this account isn't on the dashboard's access list. Add its email to the dashboard_admins table in Supabase.</p>
     <p class="err" id="loadErr" hidden style="margin-bottom:14px"></p>
     <input type="search" class="search" id="search" placeholder="Search by name, skill, or anything they wrote" aria-label="Search profiles" autocomplete="off">
     <div class="cards" id="cards"></div>
+    <section id="visits" hidden>
+      <div class="dash-head" style="margin-top:8px">
+        <div><h2 style="margin:0">Data room visits</h2><p class="dash-stats" id="vStats"></p></div>
+        <div class="dash-tools"><button type="button" class="ghost" id="vRefresh">Refresh</button><button type="button" class="ghost" id="vCsv">Export spreadsheet</button></div>
+      </div>
+      <p class="err" id="vErr" hidden style="margin-bottom:14px"></p>
+      <div class="vtable-wrap"><table class="vtable" id="vTable"></table></div>
+    </section>
   </main>
 </div>
 
@@ -170,6 +179,58 @@ async function load(){
   }
 }
 $("refreshBtn").addEventListener("click", load);
+
+/* ---------- data room visits ---------- */
+let visits = [];
+const hesc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const EV = { open:"Opened page", unlock:"Passphrase accepted", fail:"Wrong passphrase", download:"Deck", section:"Viewed" };
+function device(ua){
+  ua = ua || "";
+  const os = /iPhone|iPad/.test(ua) ? "iOS" : /Android/.test(ua) ? "Android" : /Mac OS X/.test(ua) ? "Mac" : /Windows/.test(ua) ? "Windows" : /Linux/.test(ua) ? "Linux" : "";
+  const br = /Edg\//.test(ua) ? "Edge" : /OPR\//.test(ua) ? "Opera" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : /Firefox\//.test(ua) ? "Firefox" : "";
+  return [os, br].filter(Boolean).join(" · ");
+}
+function showVisits(on){
+  $("visits").hidden = !on; $("cards").hidden = on; $("search").hidden = on; $("stats").hidden = on;
+  $("tabVisits").classList.toggle("on", on); $("tabProfiles").classList.toggle("on", !on);
+  ["refreshBtn","csvBtn","zipBtn"].forEach(id => $(id).hidden = on);
+  if(on) loadVisits();
+}
+async function loadVisits(){
+  $("vErr").hidden = true; $("vRefresh").disabled = true;
+  try{
+    const { data, error } = await sb.from("room_visits").select("*").order("created_at", { ascending:false }).limit(1000);
+    if(error) throw error;
+    visits = data || [];
+    renderVisits();
+  }catch(err){
+    $("vErr").textContent = "Couldn't load visits. Has room-visits.sql been run in Supabase?";
+    $("vErr").hidden = false;
+  }finally{ $("vRefresh").disabled = false; }
+}
+function renderVisits(){
+  const people = new Set(visits.filter(v=>v.event==="unlock").map(v=>v.visitor||v.ip)).size;
+  const fails = visits.filter(v=>v.event==="fail").length;
+  const last = visits[0] ? new Date(visits[0].created_at).toLocaleString() : "none yet";
+  $("vStats").textContent = `${visits.length} events · ${people} distinct visitor${people===1?"":"s"} got in · ${fails} wrong-passphrase attempt${fails===1?"":"s"} · last activity ${last}`;
+  const rows = visits.map(v=>{
+    const when = new Date(v.created_at).toLocaleString(undefined, { dateStyle:"medium", timeStyle:"short" });
+    const where = [v.city, v.region, v.country].filter(Boolean).join(", ") || "—";
+    const what = (EV[v.event] || v.event) + (v.detail ? " · " + v.detail : "");
+    const who = (v.visitor || "").slice(0,8);
+    return `<tr class="ev-${hesc(v.event)}"><td>${hesc(when)}</td><td>${hesc(what)}</td><td>${hesc(where)}</td><td>${hesc(v.ip||"")}</td><td>${hesc(v.org||"")}</td><td>${hesc(device(v.user_agent))}</td><td title="${hesc(v.visitor||"")}">${hesc(who)}</td></tr>`;
+  }).join("");
+  $("vTable").innerHTML = `<thead><tr><th>When</th><th>Event</th><th>Location</th><th>IP</th><th>Network</th><th>Device</th><th>Visitor</th></tr></thead><tbody>${rows || '<tr><td colspan="7">No visits recorded yet.</td></tr>'}</tbody>`;
+}
+$("tabVisits").addEventListener("click", ()=>showVisits(true));
+$("tabProfiles").addEventListener("click", ()=>showVisits(false));
+$("vRefresh").addEventListener("click", loadVisits);
+$("vCsv").addEventListener("click", ()=>{
+  const head = ["when","event","detail","city","region","country","ip","network","device","visitor","user_agent","referrer","lang","screen"];
+  const lines = [head.join(",")].concat(visits.map(v=>[v.created_at,v.event,v.detail,v.city,v.region,v.country,v.ip,v.org,device(v.user_agent),v.visitor,v.user_agent,v.referrer,v.lang,v.screen].map(x=>'"'+String(x??"").replace(/"/g,'""')+'"').join(",")));
+  const blob = new Blob(["\ufeff"+lines.join("\n")], { type:"text/csv;charset=utf-8" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "data-room-visits.csv"; a.click();
+});
 window.addEventListener("focus", ()=>{ if(!$("dashView").hidden && !$("search").hidden && !$("detail").open) load(); });
 
 /* ---------- render ---------- */

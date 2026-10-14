@@ -135,3 +135,15 @@ img.fam{display:block;width:100%;height:auto;max-height:440px;object-fit:contain
 
 [dir="rtl"] h1,[dir="rtl"] h2,[dir="rtl"] h3{letter-spacing:0}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* data room visits */
+.vtable-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.vtable{width:100%;border-collapse:collapse;font-size:14px;min-width:820px}
+.vtable th,.vtable td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top;white-space:nowrap}
+.vtable th{background:var(--sky-soft);font-weight:700;position:sticky;top:0}
+.vtable tr:last-child td{border-bottom:0}
+.vtable tr.ev-unlock td:nth-child(2){color:#2F6B3A;font-weight:600}
+.vtable tr.ev-fail td:nth-child(2){color:#9B2C2C;font-weight:600}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:4px 0 18px}
+.tab{appearance:none;background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-1px;font:inherit;font-weight:600;font-size:16px;color:var(--muted);padding:10px 14px;cursor:pointer}
+.tab.on{color:var(--ink);border-bottom-color:var(--sun)}

@@ -35,6 +35,7 @@
       <div class="dash-tools">
         <button type="button" class="ghost" id="refreshBtn">Refresh</button>
         <button type="button" class="ghost" id="csvBtn">Export spreadsheet</button>
+        <button type="button" class="ghost" id="zipBtn">Download all (photos + data)</button>
         <button type="button" class="plain" id="signOutBtn">Sign out</button>
       </div>
     </div>
@@ -74,6 +75,7 @@
 
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const BUCKET = "family-photos";
@@ -143,6 +145,7 @@ async function enterDashboard(){
   $("noAccess").hidden = !!isAdmin;
   $("search").hidden = !isAdmin;
   $("csvBtn").hidden = !isAdmin;
+  $("zipBtn").hidden = !isAdmin;
   if(!isAdmin){ $("cards").textContent = ""; $("stats").textContent = ""; return; }
   await load();
 }
@@ -300,6 +303,43 @@ $("csvBtn").addEventListener("click", ()=>{
   const url = URL.createObjectURL(new Blob([csv], {type:"text/csv;charset=utf-8"}));
   const a = document.createElement("a"); a.href = url; a.download = `founding-families-${new Date().toISOString().slice(0,10)}.csv`;
   document.body.append(a); a.click(); a.remove(); setTimeout(()=> URL.revokeObjectURL(url), 2000);
+});
+
+/* ---------- Zip: every photo plus a JSON of all profiles ---------- */
+const safeName = v => String(v||"family").replace(/[^\p{L}\p{N}_-]+/gu,"-").replace(/^-+|-+$/g,"") || "family";
+$("zipBtn").addEventListener("click", async ()=>{
+  if(!window.JSZip){ alert("The zip library didn't load. Check your connection and refresh."); return; }
+  const btn = $("zipBtn"); btn.disabled = true; const old = btn.textContent;
+  try{
+    const zip = new JSZip();
+    const used = {};
+    const manifest = families.map(f=>{
+      let base = safeName(f.family_name); if(used[base]){ used[base]++; base += "-"+used[base]; } else used[base] = 1;
+      return { ...f, ip_hash: undefined, photo_file: f.photo_path ? `photos/${base}.jpg` : null };
+    });
+    const withPhotos = manifest.filter(m=>m.photo_path);
+    let done = 0;
+    for(const m of withPhotos){
+      btn.textContent = `Fetching photos… ${done+1}/${withPhotos.length}`;
+      const { data, error } = await sb.storage.from(BUCKET).download(m.photo_path);
+      if(error || !data){ m.photo_file = null; m.photo_error = "could not download"; }
+      else zip.file(m.photo_file, data);
+      done++;
+    }
+    const clean = manifest.map(m=>{ const c = {...m}; delete c.ip_hash; delete c.photo_path; return c; });
+    zip.file("profiles.json", JSON.stringify(clean, null, 2));
+    const esc = v => { const s = String(v ?? ""); return /[",\n\r]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; };
+    const rows = [["Family name","Husband","Wife","Children","Contact","Blurb","Points","Language","Photo file","Submitted"]];
+    clean.forEach(f=> rows.push([f.family_name,f.husband,f.wife,kidsLine(f),f.contact,f.blurb,pointsOf(f).join(" | "),f.lang==="he"?"Hebrew":"English",f.photo_file||"",f.created_at?String(f.created_at).slice(0,10):""]));
+    zip.file("profiles.csv", "\ufeff" + rows.map(r=> r.map(esc).join(",")).join("\r\n"));
+    btn.textContent = "Zipping…";
+    const blob = await zip.generateAsync({ type:"blob" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = `founding-families-${new Date().toISOString().slice(0,10)}.zip`;
+    document.body.append(a); a.click(); a.remove(); setTimeout(()=> URL.revokeObjectURL(url), 5000);
+  }catch(e){
+    alert("Couldn't build the download. Nothing was changed. Try again, or download photos one at a time from each family.");
+  }finally{ btn.disabled = false; btn.textContent = old; }
 });
 
 /* ---------- boot ---------- */

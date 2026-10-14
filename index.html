@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -16,8 +16,8 @@
   <div class="topbar">
     <span></span>
     <div class="lang" role="group" aria-label="Language">
-      <button class="seg" data-lang="en" aria-pressed="true">English</button>
-      <button class="seg" data-lang="he" aria-pressed="false" lang="he">עברית</button>
+      <button class="seg" data-lang="he" aria-pressed="true" lang="he">עברית</button>
+      <button class="seg" data-lang="en" aria-pressed="false">English</button>
     </div>
   </div>
 
@@ -193,7 +193,7 @@ const cfg = window.APP_CONFIG || {};
 const ready = !!(cfg.supabaseUrl && cfg.supabaseKey && window.supabase);
 const sb = ready ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey, { auth:{ persistSession:false, autoRefreshToken:false } }) : null;
 
-let state = { lang:"en", familyName:"", husband:"", wife:"", contact:"", photo:"", kids:[{name:"",age:""}], points:["","",""], blurb:"", blurbEdited:false, draftedFrom:"" };
+let state = { lang:"he", familyName:"", husband:"", wife:"", contact:"", photo:"", kids:[{name:"",age:""}], points:["","",""], blurb:"", blurbEdited:false, draftedFrom:"" };
 const isPhoto = v => typeof v==="string" && /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(v) && v.length < 4000000;
 let generating = false, submitting = false;
 
@@ -213,7 +213,7 @@ function loadDraft(){
     const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
     if(!d || typeof d!=="object") return;
     const s = v => typeof v==="string" ? v : "";
-    state.lang = d.lang==="he" ? "he" : "en";
+    state.lang = d.lang==="en" ? "en" : "he";
     ["familyName","husband","wife","contact","blurb","draftedFrom"].forEach(k=> state[k] = s(d[k]));
     state.blurbEdited = !!d.blurbEdited;
     state.photo = isPhoto(d.photo) ? d.photo : "";

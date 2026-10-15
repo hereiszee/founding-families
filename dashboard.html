@@ -366,7 +366,9 @@ $("csvBtn").addEventListener("click", ()=>{
 });
 
 /* ---------- Zip: every photo plus a JSON of all profiles ---------- */
-const safeName = v => String(v||"family").replace(/[^\p{L}\p{N}_-]+/gu,"-").replace(/^-+|-+$/g,"") || "family";
+// Photo filenames stay ASCII so every unzip tool (Windows, Mac, Linux, phones) shows them correctly.
+// Latin letters in the family name are kept; an all-Hebrew name falls back to a short id.
+const safeName = (v, id) => String(v||"").replace(/[^A-Za-z0-9_-]+/g,"-").replace(/-{2,}/g,"-").replace(/^-+|-+$/g,"") || ("family-" + String(id||"").slice(0,8));
 $("zipBtn").addEventListener("click", async ()=>{
   if(!window.JSZip){ alert("The zip library didn't load. Check your connection and refresh."); return; }
   const btn = $("zipBtn"); btn.disabled = true; const old = btn.textContent;
@@ -374,7 +376,7 @@ $("zipBtn").addEventListener("click", async ()=>{
     const zip = new JSZip();
     const used = {};
     const manifest = families.map(f=>{
-      let base = safeName(f.family_name); if(used[base]){ used[base]++; base += "-"+used[base]; } else used[base] = 1;
+      let base = safeName(f.family_name, f.id); if(used[base]){ used[base]++; base += "-"+used[base]; } else used[base] = 1;
       return { ...f, ip_hash: undefined, photo_file: f.photo_path ? `photos/${base}.jpg` : null };
     });
     const withPhotos = manifest.filter(m=>m.photo_path);

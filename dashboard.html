@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dashboard · Founding families</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700&family=Assistant:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap" id="wrap">
+
+  <main id="loginView" class="login" hidden>
+    <h1>Founding families</h1>
+    <p class="lead" style="margin-bottom:20px">Sign in to see the profiles families have submitted.</p>
+    <p class="banner" id="notReady" hidden>The site isn't connected to the database yet. Add your Supabase details to config.js.</p>
+    <form class="sheet" id="loginForm" novalidate style="padding-top:22px">
+      <label class="f"><span class="lbl">Email</span><input type="email" id="email" autocomplete="username" required></label>
+      <label class="f"><span class="lbl">Password</span><input type="password" id="password" autocomplete="current-password" required></label>
+      <button type="submit" class="primary" id="loginBtn" style="width:100%">Sign in</button>
+      <p class="err" id="loginErr" hidden></p>
+    </form>
+  </main>
+
+  <main id="dashView" hidden>
+    <div class="dash-head">
+      <div>
+        <h1>Founding families</h1>
+        <p class="dash-stats" id="stats"></p>
+      </div>
+      <div class="dash-tools">
+        <button type="button" class="ghost" id="refreshBtn">Refresh</button>
+        <button type="button" class="ghost" id="csvBtn">Export spreadsheet</button>
+        <button type="button" class="ghost" id="zipBtn">Download all (photos + data)</button>
+        <button type="button" class="plain" id="signOutBtn">Sign out</button>
+      </div>
+    </div>
+    <nav class="tabs" aria-label="Dashboard sections"><button type="button" class="tab on" id="tabProfiles">Profiles</button><button type="button" class="tab" id="tabMessages">Messages</button><button type="button" class="tab" id="tabVisits">Data room visits</button></nav>
+    <p class="banner" id="noAccess" hidden>You're signed in, but this account isn't on the dashboard's access list. Add its email to the dashboard_admins table in Supabase.</p>
+    <p class="err" id="loadErr" hidden style="margin-bottom:14px"></p>
+    <input type="search" class="search" id="search" placeholder="Search by name, skill, or anything they wrote" aria-label="Search profiles" autocomplete="off">
+    <div class="cards" id="cards"></div>
+    <section id="messages" hidden>
+      <div class="dash-head" style="margin-top:8px">
+        <div><h2 style="margin:0">Message the families</h2><p class="dash-stats" id="mStats"></p></div>
+        <div class="dash-tools"><button type="button" class="ghost" id="mVcf">Download contacts (vCard)</button></div>
+      </div>
+      <p class="note mhelp">Write once, in either language, and translate. Each family gets the language they used on the form. Tap a name to put it in: <button type="button" class="chip" data-tok="{names}">{names}</button> <button type="button" class="chip" data-tok="{husband}">{husband}</button> <button type="button" class="chip" data-tok="{wife}">{wife}</button> <button type="button" class="chip" data-tok="{family}">{family}</button></p>
+      <div class="mcompose">
+        <div class="mcol">
+          <label class="mlab" for="mSubEn">English</label>
+          <input id="mSubEn" class="minput" placeholder="Email subject" autocomplete="off">
+          <textarea id="mEn" class="mtext" rows="8" placeholder="Hi {names}, ..."></textarea>
+          <button type="button" class="ghost" id="mToHe"><span class="spin" id="mSpinHe" hidden></span>Translate to Hebrew</button>
+        </div>
+        <div class="mcol" dir="rtl">
+          <label class="mlab" for="mSubHe">עברית</label>
+          <input id="mSubHe" class="minput" placeholder="נושא המייל" autocomplete="off" dir="rtl">
+          <textarea id="mHe" class="mtext" rows="8" dir="rtl" placeholder="היי {names}, ..."></textarea>
+          <button type="button" class="ghost" id="mToEn"><span class="spin" id="mSpinEn" hidden></span>Translate to English</button>
+        </div>
+      </div>
+      <p class="err" id="mErr" hidden></p>
+      <div class="mrow">
+        <label class="mlab" for="mRule">Language</label>
+        <select id="mRule" class="minput" style="max-width:320px">
+          <option value="form">Each family's form language</option>
+          <option value="he">Everyone in Hebrew</option>
+          <option value="en">Everyone in English</option>
+        </select>
+      </div>
+
+      <h3 class="msec">WhatsApp</h3>
+      <p class="note">Each family opens in WhatsApp with the message filled in. You press send there. "Send to next" goes down the list one family per click.</p>
+      <div class="mrow"><button type="button" class="mprimary" id="mNext">Send to next</button><span class="note" id="mProg"></span><button type="button" class="plain" id="mReset">Clear sent marks</button></div>
+      <div class="vtable-wrap"><table class="vtable mtable" id="mWa"></table></div>
+
+      <h3 class="msec">Email</h3>
+      <p class="note">Opens your email app with everyone in BCC. One email can't be personalised, so names in the message become the greeting below.</p>
+      <div class="mrow">
+        <label class="mlab" for="mGreetEn">Instead of names</label>
+        <input id="mGreetEn" class="minput" style="max-width:180px" value="everyone">
+        <input id="mGreetHe" class="minput" style="max-width:180px" value="חברים" dir="rtl">
+      </div>
+      <div class="mrow" id="mMailBtns"></div>
+      <p class="note" id="mMailNote"></p>
+    </section>
+    <section id="visits" hidden>
+      <div class="dash-head" style="margin-top:8px">
+        <div><h2 style="margin:0">Data room visits</h2><p class="dash-stats" id="vStats"></p></div>
+        <div class="dash-tools"><button type="button" class="ghost" id="vRefresh">Refresh</button><button type="button" class="ghost" id="vCsv">Export spreadsheet</button></div>
+      </div>
+      <p class="err" id="vErr" hidden style="margin-bottom:14px"></p>
+      <div class="vtable-wrap"><table class="vtable" id="vTable"></table></div>
+    </section>
+  </main>
+</div>
+
+<dialog id="detail" aria-labelledby="dName">
+  <div class="dlg">
+    <div class="dlg-top">
+      <div><h2 id="dName" dir="auto"></h2><p class="who" id="dWho" dir="auto"></p></div>
+      <button type="button" class="icon-btn close" id="dClose" aria-label="Close"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+    </div>
+    <img id="dPhoto" class="fam" alt="" hidden>
+    <p class="dmeta" id="dContact" dir="auto"></p>
+    <h3 class="dsec" id="dAboutH">About</h3>
+    <p class="blurb" id="dBlurb" dir="auto"></p>
+    <div class="gen-row" id="dGenRow" style="margin-top:10px">
+      <button type="button" class="ghost" id="dGenEn"><span class="spin" id="dGenSpin" hidden></span><span id="dGenLabel">Write blurb</span></button>
+      <button type="button" class="ghost" id="dGenHe">בעברית</button>
+      <span class="note" id="dGenNote" aria-live="polite"></span>
+    </div>
+    <h3 class="dsec" id="dPointsH">Their points</h3>
+    <ul id="dPoints" dir="auto"></ul>
+    <p class="dmeta" id="dMeta"></p>
+    <div class="rbtns">
+      <button type="button" class="ghost" id="dCopy">Copy profile</button>
+      <button type="button" class="ghost" id="dDlPhoto" hidden>Download photo</button>
+      <span class="spacer"></span>
+      <button type="button" class="plain danger" id="dDelete">Delete</button>
+    </div>
+  </div>
+</dialog>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const BUCKET = "family-photos";
+const cfg = window.APP_CONFIG || {};
+const ready = !!(cfg.supabaseUrl && cfg.supabaseKey && window.supabase);
+const sb = ready ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey, { auth:{ persistSession:true, storageKey:"ff-dashboard" } }) : null;
+
+let families = [], photoUrls = {}, current = null, loading = false;
+
+/* ---------- helpers ---------- */
+const kidsOf = f => Array.isArray(f.kids) ? f.kids.filter(k=>k && (k.name||k.age)) : [];
+const pointsOf = f => Array.isArray(f.points) ? f.points.filter(p=>typeof p==="string" && p.trim()) : [];
+const isHe = s => /[֐-׿]/.test(s||"");
+const familyTitle = f => {
+  const n = (f.family_name||"").trim() || "Unnamed";
+  return isHe(n) ? `משפחת ${n}` : `The ${n} family`;
+};
+const parentsOf = f => [f.husband, f.wife].filter(Boolean).join(isHe(f.husband+f.wife) ? " ו" : " & ");
+const kidsLine = f => kidsOf(f).map(k=> (k.name||"?") + (k.age!=="" && k.age!=null ? ` (${k.age})` : "")).join(", ");
+const fmtDate = s => s ? new Date(s).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}) : "";
+// Spreadsheet-safe CSV cell: a leading = + - @ tab or CR would run as a formula, so prefix a quote mark.
+const csvSafe = v => { const s = String(v ?? ""); return /^[=+\-@\t\r]/.test(s) ? "'" + s : s; };
+const csvCell = v => { const s = csvSafe(v); return /[",\n\r]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; };
+
+function profileText(f){
+  const lines = [familyTitle(f)];
+  const p = parentsOf(f); if(p) lines.push(p);
+  const k = kidsLine(f); if(k) lines.push("Children: " + k);
+  if(f.contact) lines.push("Contact: " + f.contact);
+  if(f.blurb){ lines.push(""); lines.push(f.blurb.trim()); }
+  const pts = pointsOf(f);
+  if(pts.length){ lines.push(""); pts.forEach(x=> lines.push("• " + x.trim())); }
+  return lines.join("\n");
+}
+async function copyText(text, btn){
+  let ok = false;
+  try{ await navigator.clipboard.writeText(text); ok = true; }catch(e){
+    try{ const ta = document.createElement("textarea"); ta.value = text; ta.style.position="fixed"; ta.style.opacity="0"; document.body.append(ta); ta.select(); ok = document.execCommand("copy"); ta.remove(); }catch(e2){}
+  }
+  if(btn){ const old = btn.textContent; btn.textContent = ok ? "Copied" : "Couldn't copy"; setTimeout(()=> btn.textContent = old, 1600); }
+}
+
+/* ---------- auth ---------- */
+function show(view){
+  $("loginView").hidden = view!=="login";
+  $("dashView").hidden = view!=="dash";
+  $("wrap").classList.toggle("wide", view==="dash");
+}
+$("loginForm").addEventListener("submit", async e=>{
+  e.preventDefault();
+  if(!ready) return;
+  $("loginErr").hidden = true;
+  $("loginBtn").disabled = true; $("loginBtn").textContent = "Signing in…";
+  const { error } = await sb.auth.signInWithPassword({ email: $("email").value.trim(), password: $("password").value });
+  $("loginBtn").disabled = false; $("loginBtn").textContent = "Sign in";
+  if(error){ $("loginErr").textContent = "That email and password didn't match. Try again."; $("loginErr").hidden = false; return; }
+  $("password").value = "";
+  enterDashboard();
+});
+$("signOutBtn").addEventListener("click", async ()=>{
+  await sb.auth.signOut();
+  families = []; photoUrls = {};
+  show("login");
+});
+
+/* ---------- data ---------- */
+async function enterDashboard(){
+  show("dash");
+  const { data: isAdmin } = await sb.rpc("is_dashboard_admin");
+  $("noAccess").hidden = !!isAdmin;
+  $("search").hidden = !isAdmin;
+  $("csvBtn").hidden = !isAdmin;
+  $("zipBtn").hidden = !isAdmin;
+  if(!isAdmin){ $("cards").textContent = ""; $("stats").textContent = ""; return; }
+  await load();
+}
+async function load(){
+  if(loading) return;
+  loading = true; $("refreshBtn").disabled = true; $("refreshBtn").textContent = "Refreshing…";
+  $("loadErr").hidden = true;
+  try{
+    const { data, error } = await sb.from("families").select("*").order("created_at", { ascending:false });
+    if(error) throw error;
+    families = data || [];
+    const paths = families.map(f=>f.photo_path).filter(p=> p && !photoUrls[p]);
+    if(paths.length){
+      const { data: signed } = await sb.storage.from(BUCKET).createSignedUrls(paths, 60*60*6);
+      (signed||[]).forEach(s=>{ if(s && s.signedUrl && s.path) photoUrls[s.path] = s.signedUrl; });
+    }
+    render();
+  }catch(err){
+    $("loadErr").textContent = "Couldn't load profiles. Check your connection and refresh.";
+    $("loadErr").hidden = false;
+  }finally{
+    loading = false; $("refreshBtn").disabled = false; $("refreshBtn").textContent = "Refresh";
+  }
+}
+$("refreshBtn").addEventListener("click", load);
+
+/* ---------- data room visits ---------- */
+let visits = [];
+const hesc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const EV = { open:"Opened page", unlock:"Passphrase accepted", fail:"Wrong passphrase", download:"Deck", section:"Viewed" };
+function device(ua){
+  ua = ua || "";
+  const os = /iPhone|iPad/.test(ua) ? "iOS" : /Android/.test(ua) ? "Android" : /Mac OS X/.test(ua) ? "Mac" : /Windows/.test(ua) ? "Windows" : /Linux/.test(ua) ? "Linux" : "";
+  const br = /Edg\//.test(ua) ? "Edge" : /OPR\//.test(ua) ? "Opera" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : /Firefox\//.test(ua) ? "Firefox" : "";
+  return [os, br].filter(Boolean).join(" · ");
+}
+function showTab(name){
+  const prof = name === "profiles";
+  $("visits").hidden = name !== "visits"; $("messages").hidden = name !== "messages";
+  $("cards").hidden = !prof; $("search").hidden = !prof; $("stats").hidden = !prof;
+  $("tabProfiles").classList.toggle("on", prof); $("tabVisits").classList.toggle("on", name === "visits"); $("tabMessages").classList.toggle("on", name === "messages");
+  ["refreshBtn","csvBtn","zipBtn"].forEach(id => $(id).hidden = !prof);
+  if(name === "visits") loadVisits();
+  if(name === "messages") renderMessages();
+}
+function showVisits(on){ showTab(on ? "visits" : "profiles"); }
+async function loadVisits(){
+  $("vErr").hidden = true; $("vRefresh").disabled = true;
+  try{
+    const { data, error } = await sb.from("room_visits").select("*").order("created_at", { ascending:false }).limit(1000);
+    if(error) throw error;
+    visits = data || [];
+    renderVisits();
+  }catch(err){
+    $("vErr").textContent = "Couldn't load visits. Has room-visits.sql been run in Supabase?";
+    $("vErr").hidden = false;
+  }finally{ $("vRefresh").disabled = false; }
+}
+function renderVisits(){
+  const people = new Set(visits.filter(v=>v.event==="unlock").map(v=>v.visitor||v.ip)).size;
+  const fails = visits.filter(v=>v.event==="fail").length;
+  const last = visits[0] ? new Date(visits[0].created_at).toLocaleString() : "none yet";
+  $("vStats").textContent = `${visits.length} events · ${people} distinct visitor${people===1?"":"s"} got in · ${fails} wrong-passphrase attempt${fails===1?"":"s"} · last activity ${last}`;
+  const rows = visits.map(v=>{
+    const when = new Date(v.created_at).toLocaleString(undefined, { dateStyle:"medium", timeStyle:"short" });
+    const where = [v.city, v.region, v.country].filter(Boolean).join(", ") || "—";
+    const what = (EV[v.event] || v.event) + (v.detail ? " · " + v.detail : "");
+    const who = (v.visitor || "").slice(0,8);
+    return `<tr class="ev-${hesc(v.event)}"><td>${hesc(when)}</td><td>${hesc(what)}</td><td>${hesc(where)}</td><td>${hesc(v.ip||"")}</td><td>${hesc(v.org||"")}</td><td>${hesc(device(v.user_agent))}</td><td title="${hesc(v.visitor||"")}">${hesc(who)}</td></tr>`;
+  }).join("");
+  $("vTable").innerHTML = `<thead><tr><th>When</th><th>Event</th><th>Location</th><th>IP</th><th>Network</th><th>Device</th><th>Visitor</th></tr></thead><tbody>${rows || '<tr><td colspan="7">No visits recorded yet.</td></tr>'}</tbody>`;
+}
+$("tabVisits").addEventListener("click", ()=>showTab("visits"));
+$("tabProfiles").addEventListener("click", ()=>showTab("profiles"));
+$("tabMessages").addEventListener("click", ()=>showTab("messages"));
+$("vRefresh").addEventListener("click", loadVisits);
+$("vCsv").addEventListener("click", ()=>{
+  const head = ["when","event","detail","city","region","country","ip","network","device","visitor","user_agent","referrer","lang","screen"];
+  const lines = [head.join(",")].concat(visits.map(v=>[v.created_at,v.event,v.detail,v.city,v.region,v.country,v.ip,v.org,device(v.user_agent),v.visitor,v.user_agent,v.referrer,v.lang,v.screen].map(x=>'"'+csvSafe(x).replace(/"/g,'""')+'"').join(",")));
+  const blob = new Blob(["\ufeff"+lines.join("\n")], { type:"text/csv;charset=utf-8" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "data-room-visits.csv"; a.click();
+});
+window.addEventListener("focus", ()=>{ if(!$("dashView").hidden && !$("search").hidden && !$("detail").open) load(); });
+
+/* ---------- render ---------- */
+function render(){
+  const nKids = families.reduce((s,f)=> s + kidsOf(f).length, 0);
+  $("stats").textContent = families.length
+    ? `${families.length} ${families.length===1?"family":"families"} and ${nKids} ${nKids===1?"child":"children"} so far. Latest on ${fmtDate(families[0].created_at)}.`
+    : "No profiles yet.";
+  const q = $("search").value.trim().toLowerCase();
+  const list = q ? families.filter(f=> [f.family_name,f.husband,f.wife,f.contact,f.blurb,kidsLine(f),...pointsOf(f)].join(" ").toLowerCase().includes(q)) : families;
+  const box = $("cards"); box.textContent = "";
+  if(!list.length){
+    const p = document.createElement("p"); p.className = "empty";
+    p.textContent = families.length ? "No profiles match that search." : "No profiles yet. Share the form link and they'll show up here as families submit.";
+    box.append(p); return;
+  }
+  list.forEach(f=>{
+    const b = document.createElement("button"); b.type = "button"; b.className = "card";
+    b.setAttribute("aria-label", "Open " + familyTitle(f));
+    const ph = document.createElement("div"); ph.className = "ph";
+    const url = f.photo_path && photoUrls[f.photo_path];
+    if(url){ const img = document.createElement("img"); img.src = url; img.alt = ""; img.loading = "lazy"; ph.append(img); }
+    else { const m = document.createElement("span"); m.className = "mono"; m.textContent = ((f.family_name||"?").trim()[0]||"?").toUpperCase(); ph.append(m); }
+    const body = document.createElement("div"); body.className = "body";
+    const nm = document.createElement("span"); nm.className = "nm"; nm.dir = "auto"; nm.textContent = familyTitle(f);
+    const sub = document.createElement("span"); sub.className = "sub"; sub.dir = "auto"; sub.textContent = parentsOf(f) || " ";
+    const n = kidsOf(f).length;
+    const sub2 = document.createElement("span"); sub2.className = "sub";
+    sub2.textContent = (n ? `${n} ${n===1?"child":"children"}` : "No children listed") + ", " + fmtDate(f.created_at);
+    body.append(nm, sub, sub2);
+    b.append(ph, body);
+    b.addEventListener("click", ()=> openDetail(f));
+    box.append(b);
+  });
+}
+$("search").addEventListener("input", render);
+
+/* ---------- detail ---------- */
+function openDetail(f){
+  current = f;
+  $("dName").textContent = familyTitle(f);
+  const kids = kidsLine(f);
+  $("dWho").textContent = [parentsOf(f), kids ? "Children: " + kids : ""].filter(Boolean).join(". ");
+  const url = f.photo_path && photoUrls[f.photo_path];
+  $("dPhoto").hidden = !url; if(url) $("dPhoto").src = url; else $("dPhoto").removeAttribute("src");
+  $("dPhoto").alt = url ? familyTitle(f) + " photo" : "";
+  $("dDlPhoto").hidden = !f.photo_path;
+  $("dContact").textContent = f.contact ? "Contact: " + f.contact : "";
+  $("dBlurb").textContent = (f.blurb||"").trim();
+  $("dAboutH").hidden = !(f.blurb||"").trim();
+  $("dBlurb").hidden = !(f.blurb||"").trim();
+  $("dGenRow").hidden = !pointsOf(f).length;
+  $("dGenLabel").textContent = (f.blurb||"").trim() ? "Rewrite blurb" : "Write blurb";
+  $("dGenNote").textContent = "";
+  const ul = $("dPoints"); ul.textContent = "";
+  pointsOf(f).forEach(p=>{ const li = document.createElement("li"); li.textContent = p; ul.append(li); });
+  $("dPointsH").hidden = ul.hidden = !ul.children.length;
+  $("dMeta").textContent = `Submitted ${fmtDate(f.created_at)}, filled in ${f.lang==="he"?"Hebrew":"English"}.`;
+  $("detail").showModal();
+}
+let drafting = false;
+async function draftFor(lang){
+  if(!current || drafting) return;
+  const f = current;
+  drafting = true; $("dGenEn").disabled = $("dGenHe").disabled = true; $("dGenSpin").hidden = false; $("dGenNote").textContent = "";
+  try{
+    const { data, error } = await sb.functions.invoke("draft-blurb", { body:{
+      lang, familyName: f.family_name||"", husband: f.husband||"", wife: f.wife||"", kids: kidsOf(f), points: pointsOf(f)
+    }});
+    if(error){
+      const status = error.context && error.context.status;
+      let code = ""; try{ code = (await error.context.json()).error; }catch(e){}
+      const why = code==="daily_cap" ? "Drafting is paused for today. Try again tomorrow."
+        : status===429 ? "Too many drafts in a short time. Wait a few minutes and try again."
+        : code==="not_configured" ? "The ANTHROPIC_API_KEY secret isn't set in Supabase."
+        : code==="upstream" ? "Anthropic rejected the request. Check the API key and billing in the Anthropic console."
+        : `Couldn't write a blurb (${status||"no response"}${code?", "+code:""}).`;
+      $("dGenNote").textContent = why; return;
+    }
+    const text = data && typeof data.blurb==="string" ? data.blurb.trim() : "";
+    if(!text){ $("dGenNote").textContent = "The draft came back empty. Try again."; return; }
+    const { error: upErr } = await sb.from("families").update({ blurb: text }).eq("id", f.id);
+    if(upErr){ $("dGenNote").textContent = "Wrote a blurb but couldn't save it. Try again."; return; }
+    f.blurb = text;
+    $("dBlurb").textContent = text; $("dBlurb").hidden = false; $("dAboutH").hidden = false;
+    $("dGenLabel").textContent = "Rewrite blurb"; $("dGenNote").textContent = "Saved.";
+  }catch(e){
+    $("dGenNote").textContent = "Couldn't write a blurb right now. Try again in a moment.";
+  }finally{
+    drafting = false; $("dGenEn").disabled = $("dGenHe").disabled = false; $("dGenSpin").hidden = true;
+  }
+}
+$("dGenEn").addEventListener("click", ()=> draftFor("en"));
+$("dGenHe").addEventListener("click", ()=> draftFor("he"));
+$("dClose").addEventListener("click", ()=> $("detail").close());
+$("detail").addEventListener("click", e=>{ if(e.target === $("detail")) $("detail").close(); });
+$("dCopy").addEventListener("click", ()=> current && copyText(profileText(current), $("dCopy")));
+$("dDlPhoto").addEventListener("click", async ()=>{
+  if(!current || !current.photo_path) return;
+  const fname = ((current.family_name||"family").replace(/[^\p{L}\p{N}_-]+/gu,"-")) + "-family-photo.jpg";
+  const { data, error } = await sb.storage.from(BUCKET).createSignedUrl(current.photo_path, 120, { download: fname });
+  if(error || !data) return;
+  const a = document.createElement("a"); a.href = data.signedUrl; a.rel = "noopener"; document.body.append(a); a.click(); a.remove();
+});
+$("dDelete").addEventListener("click", async ()=>{
+  if(!current) return;
+  if(!confirm(`Delete ${familyTitle(current)}'s profile? This can't be undone.`)) return;
+  const f = current;
+  $("dDelete").disabled = true;
+  try{
+    if(f.photo_path) await sb.storage.from(BUCKET).remove([f.photo_path]);
+    const { error } = await sb.from("families").delete().eq("id", f.id);
+    if(error) throw error;
+    families = families.filter(x=> x.id !== f.id);
+    $("detail").close(); render();
+  }catch(e){
+    alert("Couldn't delete that profile. Try again.");
+  }finally{ $("dDelete").disabled = false; }
+});
+
+/* ---------- CSV ---------- */
+$("csvBtn").addEventListener("click", ()=>{
+  const esc = csvCell;
+  const rows = [["Submitted","Family name","Husband","Wife","Children","Contact","Blurb","Points","Language","Has photo"]];
+  families.forEach(f=> rows.push([
+    f.created_at ? new Date(f.created_at).toISOString().slice(0,10) : "",
+    f.family_name, f.husband, f.wife, kidsLine(f), f.contact, f.blurb,
+    pointsOf(f).join(" | "), f.lang==="he" ? "Hebrew" : "English", f.photo_path ? "Yes" : "No"
+  ]));
+  const csv = "﻿" + rows.map(r=> r.map(esc).join(",")).join("\r\n");
+  const url = URL.createObjectURL(new Blob([csv], {type:"text/csv;charset=utf-8"}));
+  const a = document.createElement("a"); a.href = url; a.download = `founding-families-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.append(a); a.click(); a.remove(); setTimeout(()=> URL.revokeObjectURL(url), 2000);
+});
+
+/* ---------- Zip: every photo plus a JSON of all profiles ---------- */
+// Photo filenames stay ASCII so every unzip tool (Windows, Mac, Linux, phones) shows them correctly.
+// Latin letters in the family name are kept; an all-Hebrew name falls back to a short id.
+const safeName = (v, id) => String(v||"").replace(/[^A-Za-z0-9_-]+/g,"-").replace(/-{2,}/g,"-").replace(/^-+|-+$/g,"") || ("family-" + String(id||"").slice(0,8));
+$("zipBtn").addEventListener("click", async ()=>{
+  if(!window.JSZip){ alert("The zip library didn't load. Check your connection and refresh."); return; }
+  const btn = $("zipBtn"); btn.disabled = true; const old = btn.textContent;
+  try{
+    const zip = new JSZip();
+    const used = {};
+    const manifest = families.map(f=>{
+      let base = safeName(f.family_name, f.id); if(used[base]){ used[base]++; base += "-"+used[base]; } else used[base] = 1;
+      return { ...f, ip_hash: undefined, photo_file: f.photo_path ? `photos/${base}.jpg` : null };
+    });
+    const withPhotos = manifest.filter(m=>m.photo_path);
+    let done = 0;
+    for(const m of withPhotos){
+      btn.textContent = `Fetching photos… ${done+1}/${withPhotos.length}`;
+      const { data, error } = await sb.storage.from(BUCKET).download(m.photo_path);
+      if(error || !data){ m.photo_file = null; m.photo_error = "could not download"; }
+      else zip.file(m.photo_file, data);
+      done++;
+    }
+    const clean = manifest.map(m=>{ const c = {...m}; delete c.ip_hash; delete c.photo_path; return c; });
+    zip.file("profiles.json", JSON.stringify(clean, null, 2));
+    const esc = csvCell;
+    const rows = [["Family name","Husband","Wife","Children","Contact","Blurb","Points","Language","Photo file","Submitted"]];
+    clean.forEach(f=> rows.push([f.family_name,f.husband,f.wife,kidsLine(f),f.contact,f.blurb,pointsOf(f).join(" | "),f.lang==="he"?"Hebrew":"English",f.photo_file||"",f.created_at?String(f.created_at).slice(0,10):""]));
+    zip.file("profiles.csv", "\ufeff" + rows.map(r=> r.map(esc).join(",")).join("\r\n"));
+    btn.textContent = "Zipping…";
+    const blob = await zip.generateAsync({ type:"blob" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = `founding-families-${new Date().toISOString().slice(0,10)}.zip`;
+    document.body.append(a); a.click(); a.remove(); setTimeout(()=> URL.revokeObjectURL(url), 5000);
+  }catch(e){
+    alert("Couldn't build the download. Nothing was changed. Try again, or download photos one at a time from each family.");
+  }finally{ btn.disabled = false; btn.textContent = old; }
+});
+
+/* ---------- boot ---------- */
+(async ()=>{
+  if(!ready){ show("login"); $("notReady").hidden = false; $("loginBtn").disabled = true; return; }
+  const { data } = await sb.auth.getSession();
+  if(data && data.session) enterDashboard(); else show("login");
+})();
+
+/* ---------- messages: WhatsApp links and BCC email ---------- */
+const M_KEY = "ff-messages-v1";
+const mState = (()=>{ try{ return JSON.parse(localStorage.getItem(M_KEY)) || {}; }catch(_){ return {}; } })();
+mState.sent = mState.sent || {};
+function mSave(){ try{ localStorage.setItem(M_KEY, JSON.stringify(mState)); }catch(_){} }
+["mEn","mHe","mSubEn","mSubHe","mGreetEn","mGreetHe","mRule"].forEach(id=>{
+  if(mState[id] != null) $(id).value = mState[id];
+  $(id).addEventListener("input", ()=>{ mState[id] = $(id).value; mSave(); renderMessages(); });
+});
+const hasHeb = s => /[֐-׿]/.test(s||"");
+// One plain address only: no spaces or separators that could add extra BCC recipients or mailto fields.
+const isEmail = c => /^[^\s@,;?&%<>"\x00-\x1f\x7f]+@[^\s@,;?&%<>"\x00-\x1f\x7f]+\.[^\s@,;?&%<>"\x00-\x1f\x7f]+$/.test((c||"").trim());
+function waNumber(c){
+  c = (c||"").trim(); if(!c || c.includes("@")) return null;
+  let d = c.replace(/[^\d+]/g,"");
+  if(d.startsWith("+")) d = d.slice(1);
+  else if(d.startsWith("00")) d = d.slice(2);
+  else if(d.startsWith("0")) d = "972" + d.slice(1);
+  else if(/^5\d{8}$/.test(d)) d = "972" + d;
+  return /^\d{10,15}$/.test(d) ? d : null;
+}
+function famLang(f){
+  const rule = $("mRule").value;
+  let lang = rule === "form" ? (f.lang === "he" ? "he" : "en") : rule;
+  const en = $("mEn").value.trim(), he = $("mHe").value.trim();
+  if(lang === "he" && !he && en) lang = "en";
+  if(lang === "en" && !en && he) lang = "he";
+  return lang;
+}
+function joinNames(a, b, lang){
+  if(a && b){
+    if(lang === "he") return hasHeb(b) ? `${a} ו${b}` : `${a} ו-${b}`;
+    return `${a} and ${b}`;
+  }
+  return a || b || "";
+}
+function fillTokens(text, f, lang){
+  const h = (f.husband||"").trim(), w = (f.wife||"").trim(), fam = (f.family_name||"").trim();
+  return text.replace(/\{names\}/g, joinNames(h, w, lang) || fam)
+             .replace(/\{husband\}/g, h || fam).replace(/\{wife\}/g, w || fam).replace(/\{family\}/g, fam);
+}
+function msgFor(f){ const lang = famLang(f); return fillTokens(lang === "he" ? $("mHe").value.trim() : $("mEn").value.trim(), f, lang); }
+function waLink(f){ const n = waNumber(f.contact); return n ? `https://wa.me/${n}?text=${encodeURIComponent(msgFor(f))}` : null; }
+function renderMessages(){
+  if($("messages").hidden) return;
+  const ready = !!($("mEn").value.trim() || $("mHe").value.trim());
+  const wa = families.filter(f=>waNumber(f.contact)), mail = families.filter(f=>isEmail(f.contact));
+  const other = families.length - wa.length - mail.length;
+  $("mStats").textContent = `${wa.length} on WhatsApp · ${mail.length} by email` + (other ? ` · ${other} with contact details I can't read` : "");
+  const sent = wa.filter(f=>mState.sent[f.id]).length;
+  $("mProg").textContent = wa.length ? `${sent} of ${wa.length} sent` : "";
+  $("mNext").disabled = !ready || sent >= wa.length;
+  $("mNext").textContent = sent >= wa.length && wa.length ? "All sent" : "Send to next";
+  $("mWa").innerHTML = `<thead><tr><th>Family</th><th>Number</th><th>Language</th><th>Preview</th><th></th></tr></thead><tbody>` +
+    (wa.map(f=>{
+      const lang = famLang(f), m = msgFor(f), done = !!mState.sent[f.id];
+      const prev = m.split("\n")[0].slice(0,70) + (m.length > 70 ? "…" : "");
+      return `<tr class="${done ? "sent" : ""}"><td dir="auto" class="mfam">${hesc(f.family_name)}</td><td data-label="Number" dir="ltr">+${hesc(waNumber(f.contact))}</td><td data-label="Language">${lang === "he" ? "Hebrew" : "English"}</td>` +
+        `<td data-label="Preview" class="mprev"><span dir="auto">${ready ? hesc(prev) : '<span class="note">Write a message first</span>'}</span></td>` +
+        `<td class="mact">${ready ? `<a class="ghost walink" href="${hesc(waLink(f))}" target="_blank" rel="noopener" data-id="${hesc(f.id)}">${done ? "Sent, open again" : "Open WhatsApp"}</a>` : ""}</td></tr>`;
+    }).join("") || '<tr><td colspan="5">No WhatsApp numbers yet.</td></tr>') + "</tbody>";
+  $("mWa").querySelectorAll("a.walink").forEach(a=> a.addEventListener("click", ()=>{ mState.sent[a.dataset.id] = Date.now(); mSave(); setTimeout(renderMessages, 50); }));
+  // email buttons, one per language group
+  const groups = { en:[], he:[] };
+  mail.forEach(f=> groups[famLang(f)].push(f));
+  const btns = [];
+  for(const lang of ["he","en"]){
+    if(!groups[lang].length) continue;
+    btns.push(`<button type="button" class="ghost" data-mail="${lang}" ${ready ? "" : "disabled"}>Email ${lang === "he" ? "in Hebrew" : "in English"} (${groups[lang].length})</button>`);
+  }
+  btns.push(`<button type="button" class="plain" id="mCopyMails" ${mail.length ? "" : "disabled"}>Copy all email addresses</button>`);
+  $("mMailBtns").innerHTML = btns.join(" ");
+  $("mMailNote").textContent = mail.length ? mail.map(f=>f.family_name).join(", ") : "No families gave an email address.";
+  $("mMailBtns").querySelectorAll("button[data-mail]").forEach(b=> b.addEventListener("click", ()=>{
+    const lang = b.dataset.mail, list = groups[lang];
+    const greet = lang === "he" ? $("mGreetHe").value.trim() : $("mGreetEn").value.trim();
+    const body = (lang === "he" ? $("mHe").value.trim() : $("mEn").value.trim()).replace(/\{(names|husband|wife|family)\}/g, greet);
+    const subject = lang === "he" ? $("mSubHe").value.trim() : $("mSubEn").value.trim();
+    const me = (window.__ffUserEmail || "");
+    const url = `mailto:${encodeURIComponent(me)}?bcc=${list.map(f=>encodeURIComponent(f.contact.trim())).join(",")}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    (window.__ffOpen || (u => { window.location.href = u; }))(url);
+  }));
+  const cm = $("mCopyMails");
+  if(cm) cm.addEventListener("click", async ()=>{ try{ await navigator.clipboard.writeText(mail.map(f=>f.contact.trim()).join(", ")); cm.textContent = "Copied"; }catch(_){ cm.textContent = "Couldn't copy"; } setTimeout(()=> cm.textContent = "Copy all email addresses", 1600); });
+}
+$("mNext").addEventListener("click", ()=>{
+  const f = families.find(f=> waNumber(f.contact) && !mState.sent[f.id]);
+  if(!f) return;
+  window.open(waLink(f), "_blank", "noopener");
+  mState.sent[f.id] = Date.now(); mSave(); renderMessages();
+});
+$("mReset").addEventListener("click", ()=>{ mState.sent = {}; mSave(); renderMessages(); });
+document.querySelectorAll(".chip[data-tok]").forEach(c=> c.addEventListener("click", ()=>{
+  const ta = window.__mLastTa || $("mEn");
+  const pos = ta.selectionStart ?? ta.value.length;
+  ta.value = ta.value.slice(0,pos) + c.dataset.tok + ta.value.slice(ta.selectionEnd ?? pos);
+  ta.focus(); ta.selectionStart = ta.selectionEnd = pos + c.dataset.tok.length;
+  ta.dispatchEvent(new Event("input"));
+}));
+["mEn","mHe"].forEach(id=> $(id).addEventListener("focus", ()=> window.__mLastTa = $(id)));
+async function mTranslate(fromId, toId, subFrom, subTo, to, spin, btn){
+  const text = $(fromId).value.trim(); if(!text) return;
+  $("mErr").hidden = true; $(spin).hidden = false; $(btn).disabled = true;
+  try{
+    const call = t => sb.functions.invoke("translate-message", { body:{ text:t, to } });
+    const sub = $(subFrom).value.trim();
+    const [a, b] = await Promise.all([call(text), sub ? call(sub) : Promise.resolve({ data:{ text:"" } })]);
+    if(a.error || !a.data?.text) throw a.error || new Error("empty");
+    $(toId).value = a.data.text; $(toId).dispatchEvent(new Event("input"));
+    if(sub && b.data?.text){ $(subTo).value = b.data.text; $(subTo).dispatchEvent(new Event("input")); }
+  }catch(err){
+    let why = "";
+    try{ const r = err?.context; if(r && typeof r.json === "function"){ const j = await r.json(); why = j.error || ""; } }catch(_){}
+    $("mErr").textContent = why === "forbidden" || why === "unauthorized" ? "Translation is only for dashboard admins. Sign in again and retry."
+      : why === "not_configured" ? "The translation function has no API key set."
+      : "Couldn't translate right now. Has the translate-message function been deployed?";
+    $("mErr").hidden = false;
+  }finally{ $(spin).hidden = true; $(btn).disabled = false; }
+}
+$("mToHe").addEventListener("click", ()=> mTranslate("mEn","mHe","mSubEn","mSubHe","he","mSpinHe","mToHe"));
+$("mToEn").addEventListener("click", ()=> mTranslate("mHe","mEn","mSubHe","mSubEn","en","mSpinEn","mToEn"));
+$("mVcf").addEventListener("click", ()=>{
+  const lines = [];
+  families.forEach(f=>{
+    const n = waNumber(f.contact), e = isEmail(f.contact) ? f.contact.trim() : "";
+    if(!n && !e) return;
+    const label = [joinNames((f.husband||"").trim(), (f.wife||"").trim(), hasHeb(f.family_name) ? "he" : "en"), f.family_name].filter(Boolean).join(" ");
+    // No CR/LF (or other control characters) may reach the file, or a value could start a new vCard property.
+    const esc = v => String(v ?? "").replace(/[\x00-\x1f\x7f\u2028\u2029]+/g, " ").replace(/[\\,;]/g, m => "\\" + m);
+    lines.push("BEGIN:VCARD","VERSION:3.0",`FN:${esc(label + " (Kiryat Yam Suf)")}`,`N:${esc(f.family_name||"")};${esc(label)};;;`,`ORG:Kiryat Yam Suf`);
+    if(n) lines.push(`TEL;TYPE=CELL:+${n}`);
+    if(e) lines.push(`EMAIL:${esc(e)}`);
+    lines.push("END:VCARD");
+  });
+  const blob = new Blob([lines.join("\r\n")], { type:"text/vcard;charset=utf-8" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "kiryat-yam-suf-families.vcf"; a.click();
+});
+// The BCC email is addressed to whoever is signed in. Keep it current across sign-in, refresh and sign-out.
+if(sb){
+  sb.auth.getUser().then(({ data })=>{ if(data?.user?.email) window.__ffUserEmail = data.user.email; }).catch(()=>{});
+  sb.auth.onAuthStateChange((_event, session)=>{ window.__ffUserEmail = session?.user?.email || ""; });
+}
+</script>
+</body>
+</html>
